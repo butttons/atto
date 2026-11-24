@@ -1,0 +1,77 @@
+# Builds release binaries when a GitHub release is published, not on every push.
+#
+# `release: published` means the binaries follow an actual release; pushing a tag
+# alone does nothing. If you would rather a tag be enough, replace the `on:` block
+# with:
+#
+#   on:
+#     push:
+#       tags: ["v*"]
+#
+# Artifacts: atto_<os>_<arch>.tar.gz for darwin and linux on amd64 and arm64, plus
+# SHA256SUMS. Windows is not built: the file lock is unix-only.
+
+name: release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test before shipping anything
+        run: |
+          go vet ./...
+          go test ./...
+
+      - name: Build
+        run: |
+          set -eu
+          version="${TAG#v}"
+          mkdir -p dist
+          for pair in darwin/amd64 darwin/arm64 linux/amd64 linux/arm64; do
+            os="${pair%/*}"
+            arch="${pair#*/}"
+            name="atto_${os}_${arch}"
+            echo "building ${name}"
+            CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
+              go build -trimpath \
+                -ldflags "-s -w -X github.com/butttons/atto/internal/atto.version=${version}" \
+                -o "dist/${name}/atto" ./cmd/atto
+            tar -czf "dist/${name}.tar.gz" -C "dist/${name}" atto
+            rm -rf "dist/${name}"
+          done
+          (cd dist && sha256sum ./*.tar.gz > SHA256SUMS)
+
+      - name: Check the binary reports the tag
+        run: |
+          set -eu
+          expected="${TAG#v}"
+          mkdir -p probe
+          tar -xzf dist/atto_linux_amd64.tar.gz -C probe
+          out="$(./probe/atto version)"
+          echo "$out"
+          case "$out" in
+            *"$expected"*) ;;
+            *) echo "version mismatch: want $expected, got $out" >&2; exit 1 ;;
+          esac
+
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" dist/*.tar.gz dist/SHA256SUMS --clobber
