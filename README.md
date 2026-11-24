@@ -51,13 +51,30 @@ installing:
 pi -e git:github.com/butttons/atto
 ```
 
+Installing clones the extension into `~/.pi/agent/git/github.com/butttons/atto`.
+That clone is what pi loads, so a change to this repo reaches it only through
+`pi update git:github.com/butttons/atto`. The Go binary is separate: it is built
+locally and never ships through the package.
+
+## For agents
+
+[AGENTS.md](AGENTS.md) is the entry point for a coding agent working in this
+repo: layout, commands, and the two traps that cost a session.
+
+[`.agents/skills/atto/SKILL.md`](.agents/skills/atto/SKILL.md) is the skill for
+the other direction — a model that needs to edit a file and should use atto to
+do it. It is declared under `pi.skills` in `package.json`, so installing the
+package teaches the skill too.
+
 ## Verify
 
 ```sh
 cd tools/atto
 go test ./...
+go vet ./...
 go build -o atto .
 cd ../..
+npm run test:guard                        # the shell guard, 27 cases
 python3 tools/atto/bench/bench.py --atto tools/atto/atto
 ```
 

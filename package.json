@@ -6,7 +6,8 @@
   "type": "module",
   "license": "MIT",
   "pi": {
-    "extensions": ["./tools/atto/pi/atto.ts"]
+    "extensions": ["./tools/atto/pi/atto.ts"],
+    "skills": ["./.agents/skills/atto"]
   },
   "scripts": {
     "test:guard": "node --experimental-strip-types --test tools/atto/pi/guard.test.ts"
@@ -22,6 +23,7 @@
     "tools/atto/CONTRACT.md",
     "tools/atto/README.md",
     "tools/atto/bench",
+    ".agents/skills/atto",
     "README.md",
     "AGENTS.md",
     "LICENSE"
