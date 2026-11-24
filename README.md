@@ -9,8 +9,30 @@ writes nothing.
 
 ## Install
 
+Prebuilt binaries for every release: macOS and Linux, amd64 and arm64, each
+attached with a `SHA256SUMS`. Windows is not built (the file lock is unix-only).
+
 ```sh
-go install ./cmd/atto    # Go 1.22+, standard library only
+os=$(uname -s | tr 'A-Z' 'a-z')                          # darwin or linux
+arch=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')
+curl -fsSLO "https://github.com/butttons/atto/releases/latest/download/atto_${os}_${arch}.tar.gz"
+curl -fsSLO "https://github.com/butttons/atto/releases/latest/download/SHA256SUMS"
+
+# check the download before unpacking it
+grep "atto_${os}_${arch}\.tar\.gz" SHA256SUMS > expected.sha256
+sha256sum -c expected.sha256 2>/dev/null || shasum -a 256 -c expected.sha256
+
+tar -xzf "atto_${os}_${arch}.tar.gz" atto
+install -m 0755 atto ~/.local/bin/atto        # or /usr/local/bin with sudo
+atto version
+```
+
+From source, Go 1.22+ and standard library only:
+
+```sh
+go install github.com/butttons/atto/cmd/atto@latest   # into $GOBIN
+# or, in a checkout:
+go build -o atto ./cmd/atto
 ```
 
 ## Commands
@@ -82,22 +104,18 @@ conflict, and a conflict writes nothing. It never fuzzy-matches.
 
 [CONTRACT.md](CONTRACT.md) is the full contract: invariants, grammar, guarantees.
 
-## Install
+## Install the pi extension
 
-There are no prebuilt binaries, so a fresh machine needs Go 1.22+ to build it
-(Node 22+ only for the extension tests):
+The binary works on its own — any agent can call it from a shell. The extension
+is what turns it into the default edit path in pi. Install the binary first, then
+the package (Node 22+ is needed only to run the guard tests):
 
 ```sh
-git clone https://github.com/butttons/atto.git && cd atto
-go build -o atto ./cmd/atto
-mkdir -p ~/.local/bin && ln -sf "$PWD/atto" ~/.local/bin/atto   # or set ATTO_BIN
-atto version
-
 pi install git:github.com/butttons/atto
 ```
 
-Binary first, package second. The extension probes `atto version` at session
-start and, when that fails, warns and leaves the gate off: `edit`, `write`, and
+The extension probes `atto version` at session start and, when that fails,
+warns and leaves the gate off: `edit`, `write`, and
 shell edits behave as stock pi. That is deliberate. With no binary there is
 nothing to route an edit to, and blocking `edit` anyway would strand the model.
 
