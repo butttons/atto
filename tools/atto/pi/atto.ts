@@ -24,10 +24,11 @@
 
 import { spawn } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync } from "node:fs";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { Type } from "@earendil-works/pi-ai";
 import { withFileMutationQueue, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { isShellEdit } from "./guard.ts";
 
 type AttoResult = { code: number; stdout: string; stderr: string };
 
@@ -120,30 +121,15 @@ function parseRev(stdout: string): string | undefined {
   return m ? m[1] : undefined;
 }
 
-const SHELL_EDIT_PATTERNS = [
-  /\bpython[0-9.]*\s+-\s*<</,
-  /\bpython[0-9.]*\s+-c\b[^\n]*\b(write_text|writeFileSync|\.replace\s*\()/,
-  /\bsed\s+-i\b/,
-  /\bperl\s+-[A-Za-z]*i\b/,
-  /\bgit\s+apply\b/,
-  /\bapply_patch\b/,
-  /\bhashline\s+patch\b/,
-  /\btee\b/,
-  /\bnode\b[^\n]*writeFileSync/,
-];
-
-function isShellEdit(command: string): boolean {
-  if (process.env.ATTO_ALLOW_SHELL_EDITS === "1") return false;
-  if (SHELL_EDIT_PATTERNS.some((re) => re.test(command))) return true;
-  // Redirects into a file, excluding scratch space. 2>&1 and &> are not writes.
-  for (const match of command.matchAll(/(?:^|[^0-9&>])>>?\s*([^\s;|&]+)/g)) {
-    const target = match[1];
-    if (target === "/dev/null" || target.startsWith("/dev/")) continue;
-    if (target.startsWith("/tmp/") || target.startsWith("/var/tmp/")) continue;
-    if (target.startsWith("target/") || target.startsWith("./target/")) continue;
-    return true;
-  }
-  return false;
+// The regexes live in guard.ts so they can be unit-tested without a model.
+// Both false-positive classes that blocked real work came from this predicate.
+function shellEdit(command: string, cwd: string): boolean {
+  return isShellEdit(command, {
+    cwd,
+    scratchRoots: [tmpdir(), "/tmp", "/var/tmp"],
+    resolvePath: resolve,
+    allowShellEdits: process.env.ATTO_ALLOW_SHELL_EDITS === "1",
+  });
 }
 
 function block(reason: string): { block: true; reason: string } {
@@ -286,7 +272,7 @@ export default function attoExtension(pi: ExtensionAPI) {
     }
     if (event.toolName === "bash") {
       const input = event.input as { command?: string };
-      if (input.command && isShellEdit(input.command)) {
+      if (input.command && shellEdit(input.command, ctx.cwd)) {
         return block(
           "Blocked: use atto_read then atto_edit. Python, sed, perl, tee, and redirects do not edit files here; redirecting scratch output to /tmp or target/ is allowed.",
         );

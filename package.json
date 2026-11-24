@@ -8,6 +8,9 @@
   "pi": {
     "extensions": ["./tools/atto/pi/atto.ts"]
   },
+  "scripts": {
+    "test:guard": "node --experimental-strip-types --test tools/atto/pi/guard.test.ts"
+  },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*"

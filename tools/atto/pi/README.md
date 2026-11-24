@@ -8,9 +8,11 @@ The extension is a gate, not a request:
 - removes the built-in `edit` and `apply_patch` from the model's tool set
 - blocks `edit`/`apply_patch` if a codemode script or a resumed session reaches them
 - blocks `write` when the target already exists (new files are still fine)
-- blocks shell commands that edit files: `python3 - <<`, `sed -i`, `perl -pi`, `tee`, `git apply`,
-  `apply_patch`, `hashline patch`, and redirects into anything except `/tmp`, `target/`, and
-  `/dev/*`
+- blocks shell commands that edit files: `python3 - <<`, `python3 -c` that can write, `sed -i`,
+  `perl -pi`, `tee`, `git apply`, `apply_patch`, `hashline patch`, and redirects into anything
+  except `/tmp`, `target/`, and `/dev/*`
+- does not mistake code for a redirect: `=>`, `>=` and `>` inside quotes are left alone, and a
+  redirect after `cd /tmp` is recognised as scratch
 - logs every atto edit, failure, and blocked fallback to `$ATTO_HOME/pi.jsonl`, so "is the agent
   actually using it?" is a number, not a hope
 
@@ -42,6 +44,18 @@ If the binary is not on `PATH`, set `ATTO_BIN` in the environment that starts pi
 removes `edit`/`apply_patch` from the active set on `session_start`, so it still holds if the tool
 list is not pinned.
 
+## Install as a pi package
+
+```sh
+pi install git:github.com/butttons/atto
+pi update git:github.com/butttons/atto     # after a change lands
+```
+
+Installing clones the extension into `~/.pi/agent/git/github.com/butttons/atto`, and `pi update` is
+the only thing that refreshes that clone. Editing a local checkout does not affect an installed copy.
+Loading both at once is a hard error (`Tool "atto_read" conflicts with ...`), so pass `--extension`
+only on a machine where the package is not installed.
+
 ## The loop the model is taught
 
 1. `atto_read(path, from, to)` — numbered lines plus a 12-character rev.
@@ -70,6 +84,20 @@ log:          ~/.local/state/atto/pi.jsonl
 The target is `blocked: 0` and `failed edits: 0` after a few real tasks. A blocked count is not a
 failure of the extension; it is the guard catching a fallback the model tried. The log has the
 reason.
+
+## Guard tests
+
+The shell guard is a pure predicate in `guard.ts`, so it is tested directly instead of by driving a
+model at it:
+
+```sh
+cd tools/atto/pi
+node --experimental-strip-types --test guard.test.ts
+```
+
+Every case is a false positive or a bypass that actually happened: a scratch redirect after
+`cd /tmp`, `2>&1`, `=>`, `>=`, a quoted `>` and `/dev/null` must pass; a python heredoc, a writing
+`python3 -c`, `sed -i`, `tee`, and a write anywhere outside scratch must not.
 
 ## Escape hatch
 
