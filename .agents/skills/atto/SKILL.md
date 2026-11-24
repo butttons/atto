@@ -1,6 +1,6 @@
 ---
 name: atto
-description: Edit an existing file with atto — snapshot-guarded, line-addressed, atomic. Use before changing any existing file, when an edit conflicts or a rev is stale, or when you need numbered lines plus a rev for a precise change.
+description: Edit an existing file with atto — snapshot-guarded, content- or line-addressed, atomic. Use before changing any existing file, when an edit conflicts or a rev is stale, or when you need numbered lines plus a rev for a precise change.
 ---
 
 # atto
@@ -55,8 +55,9 @@ writing a valid patch into the wrong place, and the diff will look plausible.
 ## Rules that are not negotiable
 
 - No `edit`, no `write` on an existing file, no Python, `sed`, `perl`, `tee`, `git apply`, or
-  redirect to change a file. The shell guard blocks these. A block is not a hint to find a
-  different route to the same write — use `atto_sub` or `atto_edit`.
+  redirect to change a file. The guard blocks `sed -i`, `perl -pi`, `tee`, `git apply`, and a
+  redirect at a tracked file; a Python write it cannot see, and that one is on you. A block is not
+  a hint to find a different route to the same write — use `atto_sub` or `atto_edit`.
 - That applies to scripts too. A `python3 - <<'PY'` that reads, transforms and writes is the exact
   habit `atto_sub` exists to end: it is the same edit, but with no rev, no count check, no atomic
   write, and nothing to undo.
@@ -70,8 +71,8 @@ writing a valid patch into the wrong place, and the diff will look plausible.
 
 ## Read the notes
 
-The result can end with `note: lines 3 and 4 are now identical`. That is the signature of a block
-pasted twice. Fix it in the next call; do not explain it away.
+The result can end with `note: lines 3..4 are now identical: <the line>`. That is the signature
+of a block pasted twice. Fix it in the next call; do not explain it away.
 
 ## A conflict or a refusal is information
 
@@ -90,6 +91,7 @@ atto sub FILE --rev 8f3a1c2d9e0b <<'ATTO'
 +new line
 ATTO
 atto sub FILE --rev R --all      # every match, count reported
+atto sub FILE --rev R --expect 3 # exactly three, or refuse
 atto sub FILE --rev R --dry      # diff only, writes nothing
 atto patch <<'ATTO'
 file path/to/file

@@ -53,6 +53,8 @@ func Run(args []string) int {
 		err = cmdSub(args[1:])
 	case "undo":
 		err = cmdUndo(args[1:])
+	case "log":
+		err = cmdLog(args[1:])
 	case "version", "--version", "-V":
 		fmt.Printf("atto %s\n", version)
 	case "help", "--help", "-h":

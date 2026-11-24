@@ -1,31 +1,64 @@
 # atto
 
-Headless, agent-first file editing. One binary, one contract, one pi extension.
+Snapshot-guarded file editing for agents: a Go binary and a pi extension.
 
-Every change to an existing file is a snapshot-guarded, line-addressed, atomic
-transaction: read the lines, get a rev, send only the new text, get a diff and
-a new rev. No retyping old text, no fuzzy matching, no Python heredocs.
+Every change to an existing file is one atomic transaction against a rev the
+agent was given. Read the lines, hold the rev, send only the new text, get a diff
+and a new rev back. Nothing is retyped, nothing fuzzy-matches, and a stale rev
+writes nothing.
 
 ## Install
 
 ```sh
-go install ./cmd/atto    # Go 1.22+, standard library only; puts atto in $GOBIN
+go install ./cmd/atto    # Go 1.22+, standard library only
 ```
 
-## Use
+## Commands
 
 ```sh
-atto read FILE [FROM:TO]   # numbered lines + snapshot rev
-atto find FILE TEXT        # matching lines + rev (literal, case-sensitive)
-atto stat FILE             # line and byte counts, no lines
-atto patch < plan          # one atomic transaction, line-addressed
-atto sub FILE --rev R      # exact text replacement, count-checked
-atto undo FILE             # revert the last transaction
-atto log [FILE]            # recent transactions
+atto read FILE [FROM:TO]   # numbered lines + rev (a whole-file read stops at 2,000 lines)
+atto find FILE TEXT        # matching lines + rev (literal, case-sensitive, 200 matches)
+atto stat FILE             # rev, line count, byte count; no lines
+atto sub FILE --rev R      # replace exact text: '-'/'+' blocks on stdin
+atto patch < plan          # line-addressed plan on stdin
+atto undo FILE             # revert the last transaction, if the file still matches
+atto log [FILE]            # the last 20 transactions
+atto version
 ```
 
-Read the region you are about to change, keep the rev, then send only the new
-text addressed to the rev's line span:
+Exit 0 on success, 1 on failure, 2 on usage. Data goes to stdout, diagnostics to
+stderr.
+
+## Replacing text
+
+`atto sub` is the common case: the lines to find, then the lines to write.
+
+```sh
+atto read conf.ini
+
+atto sub conf.ini --rev 8f3a1c2d9e0b <<'ATTO'
+-retries=3
++retries=5
+ATTO
+```
+
+The anchor is the text, so no line arithmetic is needed, and the rev is still the
+guard. `@@` separates blocks, and every block in one call is one transaction.
+
+| the text matches | default | with a flag |
+|---|---|---|
+| nowhere | refused | refused |
+| once | replaced | replaced |
+| several times | refused, with the line numbers | `--expect N` or `--all` |
+
+That count is the difference from a script, whose `replace()` silently does
+nothing when the text is absent and silently replaces every copy when it is not.
+`--dry` prints the diff and writes nothing.
+
+## Line spans
+
+When the change is genuinely a position — moving a block, deleting lines,
+inserting at a line — address the span:
 
 ```sh
 atto read bench/fixtures/sample.rs 1:6
@@ -38,123 +71,55 @@ SWAP 3.=3:
 ATTO
 ```
 
-The response is a diff, the new rev, and the new span. If the file moved on, the
-patch refuses and shows the contested lines.
+`SWAP A.=B` replaces lines A..B inclusive, `DEL A.=B` deletes,
+`INS.PRE`/`INS.POST` insert around a line, `INS.HEAD`/`INS.TAIL` insert at the
+ends. Body lines start with `+`; a literal leading `+` is written `++`. One file
+and one rev per plan, and hunks must not overlap.
 
-### Replacing text
+If the file moved since the rev, the hunk is relocated by its old text plus three
+lines of context: a unique match is applied, no match or several matches is a
+conflict, and a conflict writes nothing. It never fuzzy-matches.
 
-Most edits are not a line span, they are "replace this text with that text".
-`atto sub` states that directly: the lines to find, then the lines to write.
-The anchor is the text, so no line arithmetic is needed, and the rev is still
-the guard.
-
-```sh
-atto sub conf.ini --rev 8f3a1c2d9e0b <<'ATTO'
--retries=3
-+retries=5
-ATTO
-```
-
-Several blocks in one call are one transaction; `@@` separates them.
-
-```sh
--render()
-+render(opts)
-@@
--version = "1.0.0"
-+version = "1.1.0"
-```
-
-The count is the safety property, and it is where `sub` differs from a script:
-
-| the text matches | default | with a flag |
-|---|---|---|
-| nowhere | refused | refused |
-| once | replaced | replaced |
-| several times | refused, with the line numbers | `--expect N` or `--all` |
-
-A script's `replace` silently does nothing when the text is absent and silently
-replaces every copy when it is not. Both are refusals here, and `--dry` prints
-the diff without writing.
-
-### Plan grammar
-
-```
-file PATH
-rev SNAPSHOT
-SWAP A.=B:
-+new line
-+another
-DEL C.=D
-INS.POST E:
-+after E
-INS.TAIL:
-+at the end
-```
-
-`SWAP A.=B` replaces lines A through B inclusive, `DEL` deletes, `INS.PRE`/`INS.POST`
-insert around a line, `INS.TAIL` appends. Body lines start with `+`; a literal
-leading `+` is `++`. One file and one rev per plan, and hunks must not overlap.
-
-[CONTRACT.md](CONTRACT.md) is the full contract: the five invariants, the state
-model, the guarantees, what is deliberately not built, and the benchmarks.
+[CONTRACT.md](CONTRACT.md) is the full contract: invariants, grammar, guarantees.
 
 ## pi extension
 
-The extension makes pi edit through atto and blocks `edit`, `write` on existing
-files, and Python/sed/perl/tee file edits. New files are still `write`.
+The extension registers `atto_read`, `atto_find`, `atto_sub`, `atto_edit` and
+`atto_undo`, and blocks `edit`, `write` on an existing file, and shell file
+editing. New files are still `write`.
 
 ```sh
 pi install git:github.com/butttons/atto
-pi update git:github.com/butttons/atto      # after a change lands here
 ```
 
-Put `atto` on PATH (or set `ATTO_BIN`). The extension is declared in
-`package.json` and loads from `pi/atto.ts`; [pi/README.md](pi/README.md) covers
-the gate, the tool loop, `/atto-stats`, and the escape hatch.
+Put `atto` on PATH or set `ATTO_BIN`. [pi/README.md](pi/README.md) covers the
+gate, what a rev authorizes, `/atto-stats`, and what it does not stop.
 
-Installing clones the extension into `~/.pi/agent/git/github.com/butttons/atto`.
-That clone is what pi loads, so a change to this repo reaches it only through
-`pi update`. The Go binary is separate: it is built locally and never ships
-through the package.
-
-## Build, test, benchmark
-
-```sh
-go test ./...
-go vet ./...
-npm run test:guard        # the shell guard, 27 cases
-```
-
-The guard is a pure predicate in `pi/guard.ts`, tested directly rather than by
-driving a model at it. `bench/bench.py` is the quick five-edit comparison;
-`bench/tools_bench.py` drives the real `hashline` and `snapedit` CLIs as well as
-exact replace and the Python workaround: 12 tasks including typo, drift,
-duplicate, stale, and a 5,000-line file, with retries counted.
-
-```sh
-go build -o atto ./cmd/atto && python3 bench/bench.py --atto "$PWD/atto"
-
-git clone https://github.com/quangdang46/hashline && (cd hashline && cargo build --release)
-git clone https://github.com/rianprei/snapedit
-python3 bench/tools_bench.py --atto "$PWD/atto" --hashline PATH --snapedit-cli PATH
-```
+Installing clones into `~/.pi/agent/git/github.com/butttons/atto`, and that clone
+is what pi loads: a change here reaches it only through `pi update`.
 
 ## State
 
 `$ATTO_HOME` (default `$XDG_STATE_HOME/atto`, else `~/.local/state/atto`) holds:
 
-- `snapshots/<rev>` — content-addressed pre/post images, needed for conflict relocation and undo
-- `journal.jsonl` — every transaction, also the event stream a viewer would consume
+- `snapshots/<rev>` — content-addressed images, needed for relocation and undo
+- `journal.jsonl` — every transaction, which is what `atto log` and `undo` read
 
-The tool never creates the state directory until a read or patch needs it.
+Nothing is created until a command needs it.
 
-## For agents
+## Build, test, benchmark
 
-[AGENTS.md](AGENTS.md) is the entry point for a coding agent working in this
-repo: layout, commands, and the traps that cost a session.
+```sh
+go build -o atto ./cmd/atto
+go test ./... && go vet ./...
+npm test                  # both pi guards, 49 cases, no model involved
+```
 
-[`.agents/skills/atto/SKILL.md`](.agents/skills/atto/SKILL.md) is the skill for
-the other direction — a model that needs to edit a file and should use atto to
-do it. It is declared under `pi.skills` in `package.json`, so installing the
-package teaches the skill too.
+```sh
+python3 bench/bench.py --atto "$PWD/atto"
+python3 bench/tools_bench.py --atto "$PWD/atto" --hashline PATH --snapedit-cli PATH
+```
+
+[AGENTS.md](AGENTS.md) is the entry point for an agent working in this repo.
+[`.agents/skills/atto/SKILL.md`](.agents/skills/atto/SKILL.md) is the skill that
+teaches a model to edit through atto.

@@ -1,7 +1,7 @@
 # atto
 
-Headless, snapshot-guarded file editing: a Go binary and a pi extension. What it is
-and why is in `README.md`; the format is in `CONTRACT.md`.
+Snapshot-guarded file editing: a Go binary and a pi extension. The what and why
+are in `README.md`; the format is in `CONTRACT.md`.
 
 ## Map
 
@@ -13,7 +13,7 @@ and why is in `README.md`; the format is in `CONTRACT.md`.
 | `pi/guard.ts` | the shell guard, a pure predicate |
 | `pi/windows.ts` | what a rev authorizes: the lines a tool actually showed |
 | `CONTRACT.md` | the five invariants, plan grammar, guarantees, benchmarks |
-| `bench/` | two harnesses: `bench.py` quick, `tools_bench.py` real CLIs |
+| `bench/` | harnesses: `bench.py` quick, `tools_bench.py` real CLIs, `ab.py` the model A/B |
 | `.agents/skills/atto/` | the skill a model loads before editing a file |
 
 Standard layout on purpose: `cmd/` holds the binary, `internal/` holds code that is
@@ -25,7 +25,7 @@ not a public API, and tests sit next to what they test.
 go build -o atto ./cmd/atto    # ~/.local/bin/atto symlinks here
 go test ./...
 go vet ./...
-npm test                      # both pi guards, 48 cases, no model involved
+npm test                      # both pi guards, 49 cases, no model involved
 ```
 
 Benchmarks:
@@ -81,3 +81,5 @@ shipping a binary nobody tested.
 - Files under 800 non-test lines. Comments say why, not what. No emoji.
 - A shell-guard fix needs a test case in `guard.test.ts`. Every case in that file is
   a false positive or a bypass that actually happened; keep it that way.
+- A verb in the `usage` text needs a dispatch case: `TestEveryAdvertisedVerbIsDispatched`
+  fails otherwise. `atto log` was advertised in five docs and reachable in none.
