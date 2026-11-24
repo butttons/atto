@@ -1,4 +1,4 @@
-package main
+package atto
 
 import (
 	"bufio"
@@ -24,35 +24,37 @@ usage:
   atto version
 `
 
-func main() {
-	if len(os.Args) < 2 {
+// Run executes one atto command and returns the process exit code.
+func Run(args []string) int {
+	if len(args) < 1 {
 		fmt.Fprint(os.Stderr, usage)
-		os.Exit(2)
+		return 2
 	}
 	var err error
-	switch os.Args[1] {
+	switch args[0] {
 	case "read":
-		err = cmdRead(os.Args[2:])
+		err = cmdRead(args[1:])
 	case "stat":
-		err = cmdStat(os.Args[2:])
+		err = cmdStat(args[1:])
 	case "patch":
-		err = cmdPatch(os.Args[2:])
+		err = cmdPatch(args[1:])
 	case "undo":
-		err = cmdUndo(os.Args[2:])
+		err = cmdUndo(args[1:])
 	case "log":
-		err = cmdLog(os.Args[2:])
+		err = cmdLog(args[1:])
 	case "version", "--version", "-V":
 		fmt.Printf("atto %s\n", version)
 	case "help", "--help", "-h":
 		fmt.Print(usage)
 	default:
-		fmt.Fprintf(os.Stderr, "atto: unknown command %q\n\n%s", os.Args[1], usage)
-		os.Exit(2)
+		fmt.Fprintf(os.Stderr, "atto: unknown command %q\n\n%s", args[0], usage)
+		return 2
 	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "atto: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }
 
 func cmdRead(args []string) error {

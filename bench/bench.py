@@ -224,7 +224,7 @@ def main():
 
     binary = str(Path(args.atto).resolve())
     if not Path(binary).exists():
-        sys.exit(f"atto binary not found at {binary}; run: go build -o atto .")
+        sys.exit(f"atto binary not found at {binary}; run: go build -o atto ./cmd/atto")
 
     editor = REPO / "bench/fixtures/sample.rs"
     cases = [case_simple(editor), case_block(editor), case_typo(editor), case_dup(), case_large()]

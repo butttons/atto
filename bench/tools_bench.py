@@ -469,7 +469,7 @@ def main():
     args = ap.parse_args()
 
     if not Path(args.atto).exists():
-        sys.exit(f"atto binary not found: {args.atto}\ngo build -o atto .")
+        sys.exit(f"atto binary not found: {args.atto}\ngo build -o atto ./cmd/atto")
     selected = set(args.tools.split(","))
     if "hashline" in selected and shutil.which(args.hashline) is None and not Path(args.hashline).exists():
         sys.exit(f"hashline not found: {args.hashline}")

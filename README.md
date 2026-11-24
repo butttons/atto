@@ -9,7 +9,7 @@ a new rev. No retyping old text, no fuzzy matching, no Python heredocs.
 ## Install
 
 ```sh
-go build -o ~/.local/bin/atto .    # Go 1.22+, standard library only
+go install ./cmd/atto    # Go 1.22+, standard library only; puts atto in $GOBIN
 ```
 
 ## Use
@@ -95,7 +95,7 @@ exact replace and the Python workaround: 12 tasks including typo, drift,
 duplicate, stale, and a 5,000-line file, with retries counted.
 
 ```sh
-go build -o atto . && python3 bench/bench.py --atto "$PWD/atto"
+go build -o atto ./cmd/atto && python3 bench/bench.py --atto "$PWD/atto"
 
 git clone https://github.com/quangdang46/hashline && (cd hashline && cargo build --release)
 git clone https://github.com/rianprei/snapedit

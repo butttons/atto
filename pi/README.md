@@ -19,7 +19,7 @@ The extension is a gate, not a request:
 ## Build and load
 
 ```sh
-go build -o atto .
+go build -o atto ./cmd/atto
 
 # one invocation
 ATTO_BIN="$PWD/atto" pi --extension "$PWD/pi/atto.ts" \

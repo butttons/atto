@@ -17,8 +17,8 @@
     "@earendil-works/pi-coding-agent": "*"
   },
   "files": [
-    "pi",
-    "*.go",
+    "cmd",
+    "internal",
     "go.mod",
     "CONTRACT.md",
     "bench",

@@ -7,23 +7,24 @@ and why is in `README.md`; the format is in `CONTRACT.md`.
 
 | Path | What |
 |---|---|
-| `*.go` | the binary — `package main` at the module root, stdlib only |
+| `cmd/atto/` | `package main` — argument parsing and exit codes, nothing else |
+| `internal/atto/` | `package atto` — the engine; `Run(args) int` is the only entry point |
 | `pi/atto.ts` | the pi extension: gates the model onto atto |
 | `pi/guard.ts` | the shell guard, a pure predicate |
 | `CONTRACT.md` | the five invariants, plan grammar, guarantees, benchmarks |
 | `bench/` | two harnesses: `bench.py` quick, `tools_bench.py` real CLIs |
 | `.agents/skills/atto/` | the skill a model loads before editing a file |
 
-No `cmd/` and no `internal/`: there is one binary and no importable library, so the
-module root is the main package.
+Standard layout on purpose: `cmd/` holds the binary, `internal/` holds code that is
+not a public API, and tests sit next to what they test.
 
 ## Build and test
 
 ```sh
-go build -o atto .    # also refreshes ~/.local/bin/atto, which symlinks here
+go build -o atto ./cmd/atto    # ~/.local/bin/atto symlinks here
 go test ./...
 go vet ./...
-npm run test:guard   # shell guard, 27 cases, no model involved
+npm run test:guard            # shell guard, 27 cases, no model involved
 ```
 
 Benchmarks:
@@ -38,8 +39,8 @@ python3 bench/tools_bench.py --atto "$PWD/atto" --hashline PATH --snapedit-cli P
 1. **Editing this checkout does not update the installed extension.** pi loads the
    clone at `~/.pi/agent/git/github.com/butttons/atto`. Extension changes need
    commit, push, then `pi update git:github.com/butttons/atto`. Go changes only need
-   `go build -o atto .` — `~/.local/bin/atto` is a symlink to it. Deleting or
-   moving that binary breaks every atto tool in the session until you rebuild.
+   `go build -o atto ./cmd/atto` — `~/.local/bin/atto` is a symlink to it. Deleting
+   that binary breaks every atto tool in the session until you rebuild.
 2. **Loading the installed package and a local `--extension` at once is a hard
    error**, `Tool "atto_read" conflicts with ...`. Pass `--extension` only where the
    package is not installed.
