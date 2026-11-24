@@ -1,0 +1,26 @@
+{
+  "name": "atto",
+  "version": "0.1.0",
+  "description": "Agent-first, snapshot-guarded file editing: a headless binary and a pi extension.",
+  "keywords": ["pi-package", "agent", "editing"],
+  "type": "module",
+  "license": "MIT",
+  "pi": {
+    "extensions": ["./tools/atto/pi/atto.ts"]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "files": [
+    "tools/atto/pi",
+    "tools/atto/*.go",
+    "tools/atto/go.mod",
+    "tools/atto/CONTRACT.md",
+    "tools/atto/README.md",
+    "tools/atto/bench",
+    "README.md",
+    "AGENTS.md",
+    "LICENSE"
+  ]
+}
