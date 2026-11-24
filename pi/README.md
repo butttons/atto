@@ -36,10 +36,19 @@ you still want. The extension also removes `edit`/`apply_patch` on
 
 ## Install as a pi package
 
+Build the binary first, then install the package:
+
 ```sh
+go build -o atto ./cmd/atto && ln -sf "$PWD/atto" ~/.local/bin/atto
+
 pi install git:github.com/butttons/atto
 pi update git:github.com/butttons/atto     # after a change lands
 ```
+
+The order is not cosmetic. On `session_start` the extension probes
+`atto version`; when it fails it warns and leaves the gate off, so `edit`,
+`write`, and shell edits behave as stock pi. Blocking `edit` with no binary to
+route to would leave the model unable to change a file at all.
 
 Installing clones into `~/.pi/agent/git/github.com/butttons/atto`, and `pi update`
 is the only thing that refreshes that clone. Loading the package and a local

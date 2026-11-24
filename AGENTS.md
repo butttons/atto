@@ -19,6 +19,20 @@ are in `README.md`; the format is in `CONTRACT.md`.
 Standard layout on purpose: `cmd/` holds the binary, `internal/` holds code that is
 not a public API, and tests sit next to what they test.
 
+## Fresh machine
+
+Go 1.22+ is the only build prerequisite; there are no prebuilt binaries.
+
+```sh
+go build -o atto ./cmd/atto
+mkdir -p ~/.local/bin && ln -sf "$PWD/atto" ~/.local/bin/atto
+pi install git:github.com/butttons/atto
+```
+
+Binary before package. The extension probes `atto version` at session start and
+leaves the gate off when it fails, so a wrong order silently degrades to stock
+pi: `edit` works, nothing is guarded, and no atto tool can run.
+
 ## Build and test
 
 ```sh

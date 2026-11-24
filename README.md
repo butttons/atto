@@ -82,21 +82,33 @@ conflict, and a conflict writes nothing. It never fuzzy-matches.
 
 [CONTRACT.md](CONTRACT.md) is the full contract: invariants, grammar, guarantees.
 
-## pi extension
+## Install
 
-The extension registers `atto_read`, `atto_find`, `atto_sub`, `atto_edit` and
-`atto_undo`, and blocks `edit`, `write` on an existing file, and shell file
-editing. New files are still `write`.
+There are no prebuilt binaries, so a fresh machine needs Go 1.22+ to build it
+(Node 22+ only for the extension tests):
 
 ```sh
+git clone https://github.com/butttons/atto.git && cd atto
+go build -o atto ./cmd/atto
+mkdir -p ~/.local/bin && ln -sf "$PWD/atto" ~/.local/bin/atto   # or set ATTO_BIN
+atto version
+
 pi install git:github.com/butttons/atto
 ```
 
-Put `atto` on PATH or set `ATTO_BIN`. [pi/README.md](pi/README.md) covers the
-gate, what a rev authorizes, `/atto-stats`, and what it does not stop.
+Binary first, package second. The extension probes `atto version` at session
+start and, when that fails, warns and leaves the gate off: `edit`, `write`, and
+shell edits behave as stock pi. That is deliberate. With no binary there is
+nothing to route an edit to, and blocking `edit` anyway would strand the model.
 
-Installing clones into `~/.pi/agent/git/github.com/butttons/atto`, and that clone
-is what pi loads: a change here reaches it only through `pi update`.
+`pi install` clones into `~/.pi/agent/git/github.com/butttons/atto`, and that
+clone is what pi loads: a change here reaches it only through
+`pi update git:github.com/butttons/atto`.
+
+The extension registers `atto_read`, `atto_find`, `atto_sub`, `atto_edit` and
+`atto_undo`, and blocks `edit`, `write` on an existing file, and shell file
+editing. New files are still `write`. [pi/README.md](pi/README.md) covers the
+gate, what a rev authorizes, `/atto-stats`, and what it does not stop.
 
 ## State
 
@@ -112,7 +124,7 @@ Nothing is created until a command needs it.
 ```sh
 go build -o atto ./cmd/atto
 go test ./... && go vet ./...
-npm test                  # both pi guards, 49 cases, no model involved
+npm test                  # both pi guards, 49 cases, no model involved (node 22+)
 ```
 
 ```sh

@@ -2,11 +2,11 @@
  * atto for pi — make the agent edit through atto, not through edit/Python/sed.
  *
  * What it does:
- *   - registers atto_read, atto_find, atto_edit, atto_undo
+ *   - registers atto_read, atto_find, atto_sub, atto_edit, atto_undo
  *   - removes the built-in `edit` and `apply_patch` from the model's tool set
  *   - blocks `edit` and `apply_patch` if something still reaches them
  *   - blocks `write` when the file already exists
- *   - blocks shell commands that edit files (python heredocs, sed -i, tee, redirects)
+ *   - blocks shell commands that can only mean "edit a file" (sed -i, tee, redirects)
  *   - records every block and every atto edit so the fallback rate is measurable
  *
  * The guard is the point. A prompt guideline is a request; this is a gate.
@@ -36,6 +36,11 @@ type AttoResult = { code: number; stdout: string; stderr: string };
 type Change = { start: number; end: number; text: string };
 
 const stats = { reads: 0, edits: 0, undos: 0, blocked: 0, failed: 0, refused: 0 };
+
+// A gate without a binary is worse than no gate: it blocks edit and leaves the
+// model nothing that can write. So the blocks below only run once a probe has
+// proved atto answers, and a misordered install degrades to stock pi.
+let gateReady = false;
 
 // Lines this session has shown the model, per path. A rev proves the file has
 // not moved; it does not prove the model read the lines it is changing. This
@@ -400,12 +405,13 @@ export default function attoExtension(pi: ExtensionAPI) {
     if (!probe || probe.code !== 0) {
       if (ctx.hasUI) {
         ctx.ui.notify(
-          "atto is not installed or not on PATH; edit is left enabled. Set ATTO_BIN.",
+          "atto is not installed or not on PATH; the guard is off and edit writes files directly. Set ATTO_BIN.",
           "warning",
         );
       }
       return;
     }
+    gateReady = true;
     const keep = pi.getActiveTools().filter((name) => name !== "edit" && name !== "apply_patch");
     for (const name of ["atto_read", "atto_find", "atto_sub", "atto_edit", "atto_undo"]) {
       if (!keep.includes(name)) keep.push(name);
@@ -414,6 +420,7 @@ export default function attoExtension(pi: ExtensionAPI) {
   });
 
   pi.on("tool_call", (event, ctx) => {
+    if (!gateReady) return;
     if (event.toolName === "edit" || event.toolName === "apply_patch") {
       return block(
         "Blocked: existing files are edited only through atto. Call atto_read for a rev, then atto_edit.",
