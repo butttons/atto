@@ -18,7 +18,7 @@ import tempfile
 import time
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[3]
+REPO = Path(__file__).resolve().parents[1]
 
 
 def read_lines(path):
@@ -219,14 +219,14 @@ def strategy_atto_stat(workdir, case, path, binary):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--atto", default=str(REPO / "tools/atto/atto"))
+    ap.add_argument("--atto", default=str(REPO / "atto"))
     args = ap.parse_args()
 
     binary = str(Path(args.atto).resolve())
     if not Path(binary).exists():
-        sys.exit(f"atto binary not found at {binary}; run: cd tools/atto && go build -o atto .")
+        sys.exit(f"atto binary not found at {binary}; run: go build -o atto .")
 
-    editor = REPO / "tools/atto/bench/fixtures/sample.rs"
+    editor = REPO / "bench/fixtures/sample.rs"
     cases = [case_simple(editor), case_block(editor), case_typo(editor), case_dup(), case_large()]
 
     strategies = ["exact", "python", "python-first", "atto", "atto-stat"]

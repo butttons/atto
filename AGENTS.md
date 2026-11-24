@@ -1,35 +1,36 @@
 # atto
 
-Headless, snapshot-guarded file editing. A Go binary in `tools/atto`, a pi extension
-in `tools/atto/pi`, and a contract in `tools/atto/CONTRACT.md`. What it is and why
-is in `README.md`; how the format works is in the contract.
+Headless, snapshot-guarded file editing: a Go binary and a pi extension. What it is
+and why is in `README.md`; the format is in `CONTRACT.md`.
 
 ## Map
 
 | Path | What |
 |---|---|
-| `tools/atto/*.go` | the binary — stdlib only, no dependencies |
-| `tools/atto/pi/atto.ts` | the pi extension: gates the model onto atto |
-| `tools/atto/pi/guard.ts` | the shell guard, a pure predicate |
-| `tools/atto/CONTRACT.md` | the five invariants, plan grammar, guarantees, benchmarks |
-| `tools/atto/bench/` | two harnesses: `bench.py` quick, `tools_bench.py` real CLIs |
+| `*.go` | the binary — `package main` at the module root, stdlib only |
+| `pi/atto.ts` | the pi extension: gates the model onto atto |
+| `pi/guard.ts` | the shell guard, a pure predicate |
+| `CONTRACT.md` | the five invariants, plan grammar, guarantees, benchmarks |
+| `bench/` | two harnesses: `bench.py` quick, `tools_bench.py` real CLIs |
 | `.agents/skills/atto/` | the skill a model loads before editing a file |
+
+No `cmd/` and no `internal/`: there is one binary and no importable library, so the
+module root is the main package.
 
 ## Build and test
 
 ```sh
-cd tools/atto
-go build -o atto .
+go build -o atto .    # also refreshes ~/.local/bin/atto, which symlinks here
 go test ./...
 go vet ./...
-npm run --prefix ../.. test:guard     # shell guard, 27 cases, no model involved
+npm run test:guard   # shell guard, 27 cases, no model involved
 ```
 
 Benchmarks:
 
 ```sh
-python3 tools/atto/bench/bench.py --atto tools/atto/atto
-python3 tools/atto/bench/tools_bench.py --atto "$PWD/tools/atto/atto" --hashline PATH --snapedit-cli PATH
+python3 bench/bench.py --atto "$PWD/atto"
+python3 bench/tools_bench.py --atto "$PWD/atto" --hashline PATH --snapedit-cli PATH
 ```
 
 ## Two things that waste a session here
@@ -37,7 +38,8 @@ python3 tools/atto/bench/tools_bench.py --atto "$PWD/tools/atto/atto" --hashline
 1. **Editing this checkout does not update the installed extension.** pi loads the
    clone at `~/.pi/agent/git/github.com/butttons/atto`. Extension changes need
    commit, push, then `pi update git:github.com/butttons/atto`. Go changes only need
-   `go build -o tools/atto/atto .` — `~/.local/bin/atto` is a symlink to it.
+   `go build -o atto .` — `~/.local/bin/atto` is a symlink to it. Deleting or
+   moving that binary breaks every atto tool in the session until you rebuild.
 2. **Loading the installed package and a local `--extension` at once is a hard
    error**, `Tool "atto_read" conflicts with ...`. Pass `--extension` only where the
    package is not installed.
@@ -52,7 +54,7 @@ session that made it. Prove it with a fresh headless run
 - Address text by 1-based line spans, never by byte offsets.
 - Keep the pi gate closed: no `edit`, no `write` on existing files, no Python
   or sed file edits.
-- Never commit the built binary; `tools/atto/atto` is ignored.
+- Never commit the built binary; `/atto` is ignored.
 - Files under 800 non-test lines. Comments say why, not what. No emoji.
 - A shell-guard fix needs a test case in `guard.test.ts`. Every case in that file is
   a false positive or a bypass that actually happened; keep it that way.

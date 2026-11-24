@@ -1,4 +1,5 @@
 .DS_Store
-/tools/atto/atto
+/atto
 __pycache__/
 *.pyc
+package-lock.json

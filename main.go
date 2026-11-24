@@ -18,7 +18,7 @@ const usage = `atto — precise, agent-first file editing
 usage:
   atto read FILE [FROM:TO]   numbered lines + snapshot id
   atto stat FILE             snapshot id, line count, byte count
-  atto patch                 apply a plan from stdin (see tools/atto/CONTRACT.md)
+  atto patch                 apply a plan from stdin (see CONTRACT.md)
   atto undo FILE             revert the last transaction, if the file still matches
   atto log [FILE]            recent transactions
   atto version

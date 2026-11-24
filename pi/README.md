@@ -19,7 +19,6 @@ The extension is a gate, not a request:
 ## Build and load
 
 ```sh
-cd tools/atto
 go build -o atto .
 
 # one invocation
@@ -35,7 +34,7 @@ If you use `settings.json`, add the extension path and put the same allowlist in
 
 ```jsonc
 {
-  "extensions": ["/absolute/path/to/atto/tools/atto/pi/atto.ts"],
+  "extensions": ["/absolute/path/to/atto/pi/atto.ts"],
   "defaultTools": ["read", "bash", "grep", "find", "ls", "atto_read", "atto_edit", "atto_undo"]
 }
 ```
@@ -91,8 +90,8 @@ The shell guard is a pure predicate in `guard.ts`, so it is tested directly inst
 model at it:
 
 ```sh
-cd tools/atto/pi
-node --experimental-strip-types --test guard.test.ts
+node --experimental-strip-types --test pi/guard.test.ts
+# or: npm run test:guard
 ```
 
 Every case is a false positive or a bypass that actually happened: a scratch redirect after

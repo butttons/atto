@@ -35,7 +35,7 @@ import time
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[3]
+REPO = Path(__file__).resolve().parents[1]
 
 TOOLS = ["exact", "python", "python-first", "hashline", "snapedit", "atto", "atto-stat"]
 SCENARIOS = ["plain", "typo", "drift", "stale", "dup", "large"]
@@ -141,16 +141,16 @@ def large_task():
 
 def make_tasks():
     tasks = []
-    tasks.append(base_task(REPO / "tools/atto/bench/fixtures/sample.rs", "rs", " // bench", "plain"))
-    tasks.append(base_task(REPO / "tools/atto/bench/fixtures/sample.rs", "rs", " // bench", "typo"))
-    tasks.append(base_task(REPO / "tools/atto/bench/fixtures/sample.rs", "rs", " // bench", "drift"))
-    tasks.append(base_task(REPO / "tools/atto/bench/fixtures/sample.rs", "rs", " // bench", "stale"))
-    tasks.append(base_task(REPO / "tools/atto/main.go", "go", " // bench", "plain"))
-    tasks.append(base_task(REPO / "tools/atto/main.go", "go", " // bench", "typo"))
-    tasks.append(base_task(REPO / "tools/atto/main.go", "go", " // bench", "drift"))
-    tasks.append(base_task(REPO / "tools/atto/bench/bench.py", "py", "  # bench", "plain"))
-    tasks.append(base_task(REPO / "tools/atto/bench/bench.py", "py", "  # bench", "typo"))
-    tasks.append(base_task(REPO / "tools/atto/bench/bench.py", "py", "  # bench", "drift"))
+    tasks.append(base_task(REPO / "bench/fixtures/sample.rs", "rs", " // bench", "plain"))
+    tasks.append(base_task(REPO / "bench/fixtures/sample.rs", "rs", " // bench", "typo"))
+    tasks.append(base_task(REPO / "bench/fixtures/sample.rs", "rs", " // bench", "drift"))
+    tasks.append(base_task(REPO / "bench/fixtures/sample.rs", "rs", " // bench", "stale"))
+    tasks.append(base_task(REPO / "main.go", "go", " // bench", "plain"))
+    tasks.append(base_task(REPO / "main.go", "go", " // bench", "typo"))
+    tasks.append(base_task(REPO / "main.go", "go", " // bench", "drift"))
+    tasks.append(base_task(REPO / "bench/bench.py", "py", "  # bench", "plain"))
+    tasks.append(base_task(REPO / "bench/bench.py", "py", "  # bench", "typo"))
+    tasks.append(base_task(REPO / "bench/bench.py", "py", "  # bench", "drift"))
     tasks.append(dup_task())
     tasks.append(large_task())
     return tasks
@@ -461,7 +461,7 @@ def evaluate(tool, task, workdir, opts):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--atto", default=str(REPO / "tools/atto/atto"))
+    ap.add_argument("--atto", default=str(REPO / "atto"))
     ap.add_argument("--hashline", default="hashline")
     ap.add_argument("--snapedit-cli", default="snapedit")
     ap.add_argument("--tools", default=",".join(TOOLS))
@@ -469,7 +469,7 @@ def main():
     args = ap.parse_args()
 
     if not Path(args.atto).exists():
-        sys.exit(f"atto binary not found: {args.atto}\ncd tools/atto && go build -o atto .")
+        sys.exit(f"atto binary not found: {args.atto}\ngo build -o atto .")
     selected = set(args.tools.split(","))
     if "hashline" in selected and shutil.which(args.hashline) is None and not Path(args.hashline).exists():
         sys.exit(f"hashline not found: {args.hashline}")

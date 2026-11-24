@@ -234,7 +234,6 @@ is in-process. A daemon would close the remaining gap, but 6 ms does not justify
 ## Build and try
 
 ```sh
-cd tools/atto
 go build -o atto .
 ./atto read bench/fixtures/sample.rs 1:6
 ./atto patch <<'ATTO'

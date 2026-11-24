@@ -53,7 +53,7 @@ atto log FILE            # recent transactions
 
 Plan body lines start with `+`; a literal leading `+` is `++`. `SWAP A.=B` replaces A..B
 inclusive, `DEL C.=D` deletes, `INS.PRE A` / `INS.POST A` insert, `INS.TAIL` appends. One file and
-one rev per plan, hunks must not overlap. Full grammar: `tools/atto/CONTRACT.md`.
+one rev per plan, hunks must not overlap. Full grammar: `CONTRACT.md`.
 
 ## What the guard allows
 

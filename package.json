@@ -6,26 +6,24 @@
   "type": "module",
   "license": "MIT",
   "pi": {
-    "extensions": ["./tools/atto/pi/atto.ts"],
+    "extensions": ["./pi/atto.ts"],
     "skills": ["./.agents/skills/atto"]
   },
   "scripts": {
-    "test:guard": "node --experimental-strip-types --test tools/atto/pi/guard.test.ts"
+    "test:guard": "node --experimental-strip-types --test pi/guard.test.ts"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*"
   },
   "files": [
-    "tools/atto/pi",
-    "tools/atto/*.go",
-    "tools/atto/go.mod",
-    "tools/atto/CONTRACT.md",
-    "tools/atto/README.md",
-    "tools/atto/bench",
+    "pi",
+    "*.go",
+    "go.mod",
+    "CONTRACT.md",
+    "bench",
     ".agents/skills/atto",
     "README.md",
-    "AGENTS.md",
-    "LICENSE"
+    "AGENTS.md"
   ]
 }

@@ -12,7 +12,7 @@
  * The guard is the point. A prompt guideline is a request; this is a gate.
  *
  * Load:
- *   pi --extension /path/to/tools/atto/pi/atto.ts
+ *   pi --extension /path/to/atto/pi/atto.ts
  *   # or copy/symlink into ~/.pi/agent/extensions/ and add it to settings.json
  *
  * Binary:
