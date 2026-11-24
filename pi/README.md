@@ -8,15 +8,19 @@ The extension is a gate, not a request:
 - removes the built-in `edit` and `apply_patch` from the model's tool set
 - blocks `edit`/`apply_patch` if a codemode script or a resumed session reaches them
 - blocks `write` when the target already exists (new files are still fine)
-- blocks shell commands that edit files: `python3 - <<`, `python3 -c` that can write, `sed -i`,
-  `perl -pi`, `tee`, `git apply`, `apply_patch`, `hashline patch`, and redirects into anything
-  except `/tmp`, `target/`, and `/dev/*`
+- blocks shell commands that can only mean "edit a file": `sed -i`, `perl -pi`, `tee`, `git apply`,
+  `apply_patch`, `hashline patch`, and redirects into anything except `/tmp`, `target/`, and
+  `/dev/*`
 - does not mistake code for a redirect: `=>`, `>=` and `>` inside quotes are left alone, and a
-  redirect after `cd /tmp` is recognised as scratch
+  redirect after `cd /tmp` — including inside a subshell or on a later line — is scratch
 - refuses an edit to lines this session never showed the model, so a rev cannot authorize changes
   to a region the model only remembers
 - logs every atto edit, failure, refusal, and blocked fallback to `$ATTO_HOME/pi.jsonl`, so "is the
   agent actually using it?" is a number, not a hope
+
+The guard classifies commands and operators, never a program's text. An earlier version tried to
+read `python3 -c` and heredocs to decide whether the code could write; it produced more false
+positives than catches, and its bypass was one line long. See "What this does not stop" below.
 
 ## Build and load
 
@@ -114,7 +118,7 @@ Repeated refusals mean the prompt guidance is not landing, not that the gate is 
 Both guards are pure modules, tested directly instead of by driving a model at them:
 
 ```sh
-npm test          # guard.test.ts and windows.test.ts, 50 cases, no model involved
+npm test          # guard.test.ts and windows.test.ts, 48 cases, no model involved
 ```
 
 Every shell-guard case is a false positive or a bypass that actually happened: a scratch redirect
@@ -125,28 +129,71 @@ writing `python3 -c`, `sed -i`, `tee`, and a write anywhere outside scratch must
 one-line read that does not authorize a block, an insertion at the edge of the shown range, a stale
 rev, and reading `truncated 2000/5000` as `1..2000` rather than the range that was asked for.
 
+## What this does not stop
+
+The gate is not a sandbox. It removes the tools and the habitual routes, and it refuses edits to
+lines the model never read. It does not stop a model that decides to write a file from inside a
+program:
+
+```sh
+python3 -c "open('main.go','w').write('...')"   # allowed
+python3 - <<'PY'                                 # allowed
+open('main.go','w').write('...')
+PY
+```
+
+That is a deliberate trade. Classifying a program's behaviour with a regex cost six false
+positives in one session — a heredoc used to *read* JSON, a read of a `.github/workflows/` path, a
+`(cd dist && ...)` subshell — and the bypass was always one line away. The remaining rules fire on
+commands that have no other meaning, so they do not misfire on ordinary work.
+
+What is left is the honest claim: atto is the path of least resistance, and `atto_read`/`atto_edit`
+are the only tools that can change an existing file. A model that goes around it is visible in the
+log rather than impossible.
+
 ## Escape hatch
 
 `ATTO_ALLOW_SHELL_EDITS=1` disables the shell guard. Do not use it for normal agent work; it
 exists so a migration or a one-off script can get through without unloading the extension.
 
-## The proof that it is better
+## What the A/B actually measured
 
-The deterministic harness is `../bench/tools_bench.py` (see [CONTRACT.md](../CONTRACT.md)). It compares the
-substrate, not the model. The live proof is an A/B run of the same tasks with the same model:
+`bench/ab.py` runs the same tasks through the same model twice: stock pi (`read,bash,edit,write`)
+and gated pi (`read,bash,atto_read,atto_find,atto_edit,atto_undo`). Success is the file matching the
+expected bytes. Every run gets a fresh directory, a fresh session, no context files, skills or MCP,
+and a throwaway config directory, so the only difference is the editing tools.
 
 ```sh
-# A: stock pi
-pi --print --mode json --no-session --tools read,bash,edit,write \
-  "In work/f.rs, change line 2 to BRAVO. Use the edit tool."
-
-# B: atto enforced
-ATTO_BIN="$PWD/atto" pi --print --mode json --no-session --extension "$PWD/pi/atto.ts" \
-  --tools read,bash,atto_read,atto_find,atto_edit,atto_undo \
-  "In work/f.rs, change line 2 to BRAVO."
+python3 bench/ab.py --runs 3 --provider opencode-go --model glm-5.3-flash
 ```
 
-Run 20 mutation tasks, 3 times each, and compare: task success, tool calls, retries, input/output
-tokens, wall time, and blocked fallbacks. Success is the file matching the expected content (or the
-tests passing), not the model saying it is done. That run is the next deliverable; the extension
-records the data it needs.
+20 tasks x 3 runs x 2 conditions. Two tasks were bad fixtures and are excluded (one rewarded
+running `gofmt` via bash rather than editing precisely; one had ambiguous backslash escaping). On
+the remaining 18, all 54 runs per condition landed:
+
+| | stock | atto |
+|---|---|---|
+| tasks landed | 54/54 | 54/54 |
+| tool calls, total | 145 | 138 |
+| input tokens | 322,727 | 392,504 (+22%) |
+| output tokens | 6,782 | 6,942 |
+| mean wall time | 7.0 s | 7.6 s |
+| shell fallbacks | 2 | 0 |
+| tool errors | 0 | 9 |
+
+Read this honestly: **on simple single-file edits the gate did not make the model more successful.**
+Success was identical. It cost 22% more input tokens and 9% more wall time.
+
+Where the tokens went: 352 of the per-request tokens are prompt overhead (four tool schemas and
+their guidelines against two), about 82% of the delta. The rest is atto's output: numbered lines
+with a rev, and a diff on every edit.
+
+What the gate did buy, in the same runs: no shell fallbacks, slightly fewer tool calls, and every
+edit carrying a rev and a diff. The 9 tool errors were all recoverable refusals — a model edits a
+range it has not read, is told so, reads, and retries; none of them lost a task.
+
+What this run does **not** show is the case atto exists for. Single-line edits on a small file are
+the easy path for exact-match editing too. The failures atto is designed against need drift, stale
+readings, duplicate blocks, and edits made between two reads — none of which these tasks create.
+Until a run exercises those, the claim is the narrow one: atto is not slower or less correct here,
+the gate is recoverable, and the cost is prompt tokens.

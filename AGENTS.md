@@ -25,7 +25,7 @@ not a public API, and tests sit next to what they test.
 go build -o atto ./cmd/atto    # ~/.local/bin/atto symlinks here
 go test ./...
 go vet ./...
-npm test                      # both pi guards, 50 cases, no model involved
+npm test                      # both pi guards, 48 cases, no model involved
 ```
 
 Benchmarks:

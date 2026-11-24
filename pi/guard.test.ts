@@ -40,15 +40,16 @@ const allowed = [
   ["python -c read of a workspace path", `python3 -c "print(open('/w/work/build.log').read())"`],
   // A subshell cd was invisible, so its redirect looked like a repo write.
   ["subshell cd scratch redirect", "(cd /tmp/reltest && sha256sum ./*.tar.gz > SHA256SUMS)"],
+  // A cd after a newline was invisible too; multi-line commands are normal.
+  ["newline cd then scratch write", "printf 'a\\n' > ab.txt\ncd /tmp/dt && printf 'b\\n' > note.txt"],
+  // Deliberately allowed: a program's text is not classified. See what this
+  // does not stop, in pi/README.md. Blocking these cost more than it caught.
+  ["python heredoc", "python3 - <<'PY'\nprint(open('f').read())\nPY"],
+  ["python -c write", "python3 -c \"open('a','w').write('x')\""],
+  ["python -c pathlib write", "python3 -c \"from pathlib import Path; Path('a').write_text('x')\""],
 ] as const;
 
 const blocked = [
-  ["python heredoc", "python3 - <<'PY'\nopen('x','w')\nPY"],
-  ["python -c write", "python3 -c \"open('a','w').write('x')\""],
-  ["python -c pathlib write", "python3 -c \"from pathlib import Path; Path('a').write_text('x')\""],
-  ["python -c truncate", "python3 -c \"open('a','w').close()\""],
-  ["python -c append", "python3 -c \"open('a', 'a').write('x')\""],
-  ["python -c binary write", "python3 -c \"open('a', 'wb')\""],
   ["sed -i", "sed -i '' s/a/b/ main.go"],
   ["perl -pi", "perl -pi -e s/a/b/ main.go"],
   ["repo redirect", "echo hi > main.go"],

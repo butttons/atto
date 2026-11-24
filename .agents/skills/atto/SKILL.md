@@ -74,8 +74,12 @@ one rev per plan, hunks must not overlap. Full grammar: `CONTRACT.md`.
 ## What the guard allows
 
 Scratch output is fine: redirects into `/tmp`, `target/`, and `/dev/*`, including after a
-`cd /tmp`. `=>`, `>=`, and a `>` inside quotes are not redirects. Read-only shell — `cat`, `grep`,
-`git diff`, `python3 -c "print(open(f).read())"` — is untouched.
+`cd /tmp` on any line or in a subshell. `=>`, `>=`, and a `>` inside quotes are not redirects.
+Read-only shell — `cat`, `grep`, `git diff`, `python3 -c ...` — is untouched.
+
+It blocks `sed -i`, `perl -pi`, `tee`, `git apply`, and redirects at tracked files. It does not
+inspect program text, so it will not stop a script that writes. Do not be that script: the whole
+value is the rev, and a python write has none.
 
 `ATTO_ALLOW_SHELL_EDITS=1` disables the guard. It exists for migrations and one-off scripts, not
 for agent work.
