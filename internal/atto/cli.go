@@ -26,6 +26,8 @@ usage:
   atto stat FILE             snapshot id, line count, byte count
   atto patch [--allow-duplicate]
                              apply a plan from stdin (see CONTRACT.md)
+  atto sub FILE --rev R [--all | --expect N] [--dry]
+                             replace exact lines given as '-'/'+' blocks on stdin
   atto undo FILE             revert the last transaction, if the file still matches
   atto log [FILE]            recent transactions
   atto version
@@ -47,6 +49,8 @@ func Run(args []string) int {
 		err = cmdStat(args[1:])
 	case "patch":
 		err = cmdPatch(args[1:])
+	case "sub":
+		err = cmdSub(args[1:])
 	case "undo":
 		err = cmdUndo(args[1:])
 	case "version", "--version", "-V":
@@ -202,6 +206,112 @@ func cmdPatch(args []string) error {
 	return nil
 }
 
+// cmdSub applies text replacements stated as the exact lines to find. It is the
+// verb that keeps an agent out of Python: one call per edit like a script, but
+// the match count is checked and the write is atomic under a rev.
+func cmdSub(args []string) error {
+	var (
+		file   string
+		rev    string
+		all    bool
+		dry    bool
+		expect = -1
+	)
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		switch {
+		case a == "--all":
+			all = true
+		case a == "--dry":
+			dry = true
+		case a == "--rev":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--rev needs a snapshot id")
+			}
+			i++
+			rev = args[i]
+		case strings.HasPrefix(a, "--rev="):
+			rev = strings.TrimPrefix(a, "--rev=")
+		case a == "--expect":
+			if i+1 >= len(args) {
+				return fmt.Errorf("--expect needs a count")
+			}
+			i++
+			n, err := strconv.Atoi(args[i])
+			if err != nil || n < 0 {
+				return fmt.Errorf("--expect needs a count, got %q", args[i])
+			}
+			expect = n
+		case strings.HasPrefix(a, "--expect="):
+			n, err := strconv.Atoi(strings.TrimPrefix(a, "--expect="))
+			if err != nil || n < 0 {
+				return fmt.Errorf("--expect needs a count, got %q", a)
+			}
+			expect = n
+		case strings.HasPrefix(a, "-"):
+			return fmt.Errorf("sub knows --rev, --all, --expect N and --dry; %q is not one of them", a)
+		default:
+			if file != "" {
+				return fmt.Errorf("sub takes one FILE")
+			}
+			file = a
+		}
+	}
+	if file == "" {
+		return fmt.Errorf("sub needs FILE")
+	}
+	if rev == "" {
+		return fmt.Errorf("sub needs --rev SNAPSHOT; read the file first")
+	}
+	// Passing --all and --expect together is not a contradiction: the count is
+	// the stronger statement and wins. Refusing the pair would just teach a
+	// caller to retry without one of them.
+	blocks, err := readSubBlocks()
+	if err != nil {
+		return err
+	}
+	abs, err := resolvePath(file)
+	if err != nil {
+		return err
+	}
+	snapRaw, err := loadSnapshot(rev)
+	if err != nil {
+		return err
+	}
+	if got := snapshotRev(abs, snapRaw); got != rev {
+		return fmt.Errorf("snapshot %s does not belong to %s; re-read the file", rev, abs)
+	}
+	snapText, _, _, err := decode(snapRaw)
+	if err != nil {
+		return err
+	}
+	snapLines, _ := splitLines(snapText)
+	hunks, replaced, err := resolveSubs(blocks, snapLines, all, expect)
+	if err != nil {
+		return err
+	}
+	res, err := applyPlan(abs, &Plan{File: file, Rev: rev, Hunks: hunks, Dry: dry}, describeSubs(blocks))
+	if err != nil {
+		return err
+	}
+	fmt.Print(res.Diff)
+	for _, span := range res.Spans {
+		fmt.Printf("span %s\n", span)
+	}
+	for _, note := range res.Notes {
+		fmt.Println(note)
+	}
+	fold := "replaced"
+	if dry {
+		fold = "would replace"
+	}
+	fmt.Printf("%s %d occurrence(s) across %d block(s) in %d match(es)\n",
+		fold, replaced, len(blocks), len(hunks))
+	if !dry {
+		fmt.Printf("file %s\nrev %s\n", abs, res.NewRev)
+	}
+	return nil
+}
 func cmdFind(args []string) error {
 	if len(args) != 2 {
 		return fmt.Errorf("find needs FILE TEXT")

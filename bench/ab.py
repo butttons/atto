@@ -35,7 +35,7 @@ EXTENSION = REPO / "pi/atto.ts"
 CONFIG_DIR = Path(tempfile.gettempdir()) / "atto-ab-conf"
 
 STOCK_TOOLS = "read,bash,edit,write"
-ATTO_TOOLS = "read,bash,atto_read,atto_find,atto_edit,atto_undo"
+ATTO_TOOLS = "read,bash,atto_read,atto_find,atto_sub,atto_edit,atto_undo"
 
 # Things a model reaches for when it is not using the edit tool. Counted, not judged.
 FALLBACK_MARKERS = ("sed -i", "perl -pi", "python", "tee ", "apply_patch", "cat >", "echo >")
@@ -184,6 +184,28 @@ def tasks() -> list[Task]:
         "delete-middle-line-exactly", "splice.txt", "head\nA\nB\nC\ntail\n",
         "In splice.txt, delete only the line 'B', leaving head, A, C and tail exactly as they are.",
         "head\nA\nC\ntail\n"))
+
+    # The shapes that used to send the model to Python: replace every copy, and
+    # several scattered changes in one pass. A literal replace() is the operation
+    # the tool list has to be able to express, or the model leaves for a shell.
+    t.append(Task(
+        "replace-every-occurrence", "q.md", "TODO\nbody\nTODO\nmore\nTODO\n",
+        "In q.md, replace every occurrence of the line 'TODO' with '- [ ] task', and change nothing else.",
+        "- [ ] task\nbody\n- [ ] task\nmore\n- [ ] task\n"))
+    t.append(Task(
+        "scattered-edits-one-pass", "svc.yaml",
+        "name: old\nport: 80\nhost: a\ndebug: false\nretries: 1\n",
+        "In svc.yaml make three changes: set name to 'svc', set port to 8080, and set debug to true. "
+        "Change nothing else.",
+        "name: svc\nport: 8080\nhost: a\ndebug: true\nretries: 1\n"))
+    t.append(Task(
+        "replace-multiline-block", "compose.yaml",
+        'services:\n  app:\n    image: v1\n    restart: always\n    ports:\n      - "80:80"\n',
+        ("In compose.yaml, replace the two lines '    image: v1' and '    restart: always' "
+         "with the three lines '    image: v2', '    restart: unless-stopped' and "
+         "'    pull_policy: always', in that order. Change nothing else."),
+        'services:\n  app:\n    image: v2\n    restart: unless-stopped\n    pull_policy: always\n'
+        '    ports:\n      - "80:80"\n'))
     return t
 
 

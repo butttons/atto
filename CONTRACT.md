@@ -155,13 +155,52 @@ Rules:
 - One `file` and one `rev` per plan. Multi-file plans are a v2 concern; the atomicity that
   matters first is within a file.
 
+## Text replacement
+
+Measured over two months of real sessions (11,479 shell calls reaching for Python, 3,511 of them
+writing files), the operation an agent performs most is not a line span, it is *replace this text
+with that text*: 78% of those writes were a literal `replace()`, 13% a regex substitution, 18% a
+read-transform-write cycle. A tool that speaks only spans leaves the agent no way to say the one
+thing it means, so it writes a script instead. That is the failure `atto sub` exists to close.
+
+The grammar is the same anchor-and-body idea, addressed by content rather than coordinates:
+
+```
+file path/to/conf.ini
+rev 8f3a1c2d9e0b
+-retries=3
++retries=5
+@@
+-render()
++render(opts)
+```
+
+- A block is one or more `-` lines (the exact lines to find) followed by zero or more `+` lines
+  (what replaces them). A block with no `+` lines is a deletion.
+- `@@` separates blocks. It is optional: a `-` line after a `+` line starts a new block.
+- Matching is literal and contiguous, byte for byte, including indentation. No whitespace
+  tolerance and no fuzzy matching: a near miss is a refusal, not a best guess.
+- Blank lines in the input are ignored. To match a blank line, write `-` alone.
+- The count is checked. One match is the default; more than one is refused unless `--expect N`
+  states the count or `--all` accepts any. Zero matches is always a refusal.
+- `--dry` renders the diff and the prospective rev without writing.
+- All blocks in one call are one transaction: one rev in, one rev out, one journal entry.
+
+This is where `sub` differs from a script, and the difference is the point. `replace()` silently
+does nothing when the text is absent, which is indistinguishable from success in a shell that only
+shows you `exit 0`. It silently replaces every copy when the text is present several times, which
+is indistinguishable from having edited one. Both cases are refusals here, and the refusal names
+the line numbers of every match so the next call can be exact.
+
 ## CLI
 
 ```
 atto read FILE [FROM:TO]         numbered lines + snapshot id
 atto find FILE TEXT              matching lines + snapshot id (literal, case-sensitive)
 atto stat FILE                   snapshot id, line count, byte count (records the snapshot)
-atto patch [--allow-duplicate]   apply a plan from stdin
+atto patch [--allow-duplicate]   apply a line-addressed plan from stdin
+atto sub FILE --rev R            replace exact text: '-'/'+' blocks on stdin
+                                 [--all | --expect N] [--dry]
 atto undo FILE                   revert the last transaction, if the file still matches
 atto log [FILE]                  recent transactions
 atto version

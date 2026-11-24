@@ -237,10 +237,19 @@ func applyPlan(abs string, plan *Plan, rawPlan string) (*patchResult, error) {
 	if bytes.Equal(newRaw, liveRaw) {
 		return nil, fmt.Errorf("plan makes no changes")
 	}
+	verb := "applied"
+	if plan.Dry {
+		verb = "would apply"
+	}
+	newRev := snapshotRev(abs, newRaw)
+	diff, spans := renderDiff(abs, plan.Rev, newRev, liveLines, mapped, verb)
+	notes := duplicateNotes(liveLines, newLines)
+	if plan.Dry {
+		return &patchResult{Path: abs, OldRev: plan.Rev, NewRev: newRev, Diff: diff, Spans: spans, Notes: notes}, nil
+	}
 	if err := atomicWrite(abs, newRaw, fileMode(abs)); err != nil {
 		return nil, err
 	}
-	newRev := snapshotRev(abs, newRaw)
 	if err := storeSnapshot(newRev, newRaw); err != nil {
 		return nil, err
 	}
@@ -253,14 +262,13 @@ func applyPlan(abs string, plan *Plan, rawPlan string) (*patchResult, error) {
 	}); err != nil {
 		return nil, fmt.Errorf("wrote the file but could not journal the transaction: %w", err)
 	}
-	diff, spans := renderDiff(abs, plan.Rev, newRev, liveLines, mapped)
 	return &patchResult{
 		Path:   abs,
 		OldRev: plan.Rev,
 		NewRev: newRev,
 		Diff:   diff,
 		Spans:  spans,
-		Notes:  duplicateNotes(liveLines, newLines),
+		Notes:  notes,
 	}, nil
 }
 
@@ -302,9 +310,9 @@ func numbered(lines []string, from, to, limit int) string {
 	return b.String()
 }
 
-func renderDiff(path, oldRev, newRev string, live []string, mapped []appliedHunk) (string, []string) {
+func renderDiff(path, oldRev, newRev string, live []string, mapped []appliedHunk, verb string) (string, []string) {
 	var b strings.Builder
-	fmt.Fprintf(&b, "applied %s\n", path)
+	fmt.Fprintf(&b, "%s %s\n", verb, path)
 	fmt.Fprintf(&b, "rev %s -> %s\n", oldRev, newRev)
 
 	sorted := slices.Clone(mapped)

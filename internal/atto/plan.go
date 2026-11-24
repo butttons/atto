@@ -23,6 +23,7 @@ type Plan struct {
 	Rev            string
 	Hunks          []Hunk
 	AllowDuplicate bool // set by the CLI only; never parsed from the plan
+	Dry            bool // set by the CLI only; render the diff without writing
 }
 
 func parsePlan(text string) (*Plan, error) {

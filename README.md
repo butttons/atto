@@ -18,7 +18,8 @@ go install ./cmd/atto    # Go 1.22+, standard library only; puts atto in $GOBIN
 atto read FILE [FROM:TO]   # numbered lines + snapshot rev
 atto find FILE TEXT        # matching lines + rev (literal, case-sensitive)
 atto stat FILE             # line and byte counts, no lines
-atto patch < plan          # one atomic transaction
+atto patch < plan          # one atomic transaction, line-addressed
+atto sub FILE --rev R      # exact text replacement, count-checked
 atto undo FILE             # revert the last transaction
 atto log [FILE]            # recent transactions
 ```
@@ -39,6 +40,42 @@ ATTO
 
 The response is a diff, the new rev, and the new span. If the file moved on, the
 patch refuses and shows the contested lines.
+
+### Replacing text
+
+Most edits are not a line span, they are "replace this text with that text".
+`atto sub` states that directly: the lines to find, then the lines to write.
+The anchor is the text, so no line arithmetic is needed, and the rev is still
+the guard.
+
+```sh
+atto sub conf.ini --rev 8f3a1c2d9e0b <<'ATTO'
+-retries=3
++retries=5
+ATTO
+```
+
+Several blocks in one call are one transaction; `@@` separates them.
+
+```sh
+-render()
++render(opts)
+@@
+-version = "1.0.0"
++version = "1.1.0"
+```
+
+The count is the safety property, and it is where `sub` differs from a script:
+
+| the text matches | default | with a flag |
+|---|---|---|
+| nowhere | refused | refused |
+| once | replaced | replaced |
+| several times | refused, with the line numbers | `--expect N` or `--all` |
+
+A script's `replace` silently does nothing when the text is absent and silently
+replaces every copy when it is not. Both are refusals here, and `--dry` prints
+the diff without writing.
 
 ### Plan grammar
 

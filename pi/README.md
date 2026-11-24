@@ -4,7 +4,7 @@ Make pi edit through atto, and make the fallback visible.
 
 The extension is a gate, not a request:
 
-- registers `atto_read`, `atto_find`, `atto_edit`, `atto_undo`
+- registers `atto_read`, `atto_find`, `atto_sub`, `atto_edit`, `atto_undo`
 - removes the built-in `edit` and `apply_patch` from the model's tool set
 - blocks `edit`/`apply_patch` if a codemode script or a resumed session reaches them
 - blocks `write` when the target already exists (new files are still fine)
@@ -29,7 +29,7 @@ go build -o atto ./cmd/atto
 
 # one invocation
 ATTO_BIN="$PWD/atto" pi --extension "$PWD/pi/atto.ts" \
-  --tools read,bash,grep,find,ls,atto_read,atto_find,atto_edit,atto_undo
+  --tools read,bash,grep,find,ls,atto_read,atto_find,atto_sub,atto_edit,atto_undo
 
 # or make it the default: symlink it into the personal extensions directory
 ln -s "$PWD/pi/atto.ts" ~/.pi/agent/extensions/atto.ts
@@ -41,7 +41,7 @@ If you use `settings.json`, add the extension path and put the same allowlist in
 ```jsonc
 {
   "extensions": ["/absolute/path/to/atto/pi/atto.ts"],
-  "defaultTools": ["read", "bash", "grep", "find", "ls", "atto_read", "atto_find", "atto_edit", "atto_undo"]
+  "defaultTools": ["read", "bash", "grep", "find", "ls", "atto_read", "atto_find", "atto_sub", "atto_edit", "atto_undo"]
 }
 ```
 
@@ -64,8 +64,12 @@ only on a machine where the package is not installed.
 ## The loop the model is taught
 
 1. `atto_find(path, text)` or `atto_read(path, from, to)` — the numbered lines, plus a rev.
-2. `atto_edit(path, rev, changes)` — `{start, end, text}` hunks, all in one transaction.
-3. The result is a diff, a new rev, and the new line spans.
+2. `atto_sub(path, rev, changes)` — `{old, new}` text replacement. This is the default verb: most
+   edits are "replace this text with that text", and the model reaches for a Python script when the
+   tool list cannot say it. `expect` / `all` state how many matches are intended.
+3. `atto_edit(path, rev, changes)` — `{start, end, text}` hunks, for a change that is genuinely a
+   line range (moving a block, deleting lines, an insertion by position).
+4. The result is a diff, a new rev, and the new line spans.
 
 `end = start - 1` inserts before `start`. Empty `text` deletes `start..end`. A conflict writes
 nothing and returns the contested lines; the model re-reads and retries.
@@ -84,6 +88,7 @@ So the extension remembers what it has shown, per path and rev, and refuses anyt
 | `atto_read(path, 40, 50)` | 40..50, or insert at either edge |
 | `atto_read(path)` on a 5,000-line file | 1..2000, the lines actually printed |
 | `atto_find(path, text)` | the lines it matched |
+| `atto_sub(...)` | the spans it just wrote |
 | `atto_edit(...)` | the spans it just wrote |
 | `atto_undo(path)` | nothing, until the file is read again |
 | nothing | nothing |
@@ -159,9 +164,9 @@ exists so a migration or a one-off script can get through without unloading the 
 ## What the A/B actually measured
 
 `bench/ab.py` runs the same tasks through the same model twice: stock pi (`read,bash,edit,write`)
-and gated pi (`read,bash,atto_read,atto_find,atto_edit,atto_undo`). Success is the file matching the
-expected bytes. Every run gets a fresh directory, a fresh session, no context files, skills or MCP,
-and a throwaway config directory, so the only difference is the editing tools.
+and gated pi (`read,bash,atto_read,atto_find,atto_sub,atto_edit,atto_undo`). Success is the file
+matching the expected bytes. Every run gets a fresh directory, a fresh session, no context files,
+skills or MCP, and a throwaway config directory, so the only difference is the editing tools.
 
 ```sh
 python3 bench/ab.py --runs 3 --provider opencode-go --model glm-5.3-flash
@@ -209,6 +214,26 @@ tasks x 3 runs x 2 conditions:
 The direction flips here: atto took 20% fewer calls, 4.5% fewer input tokens, and no retries. Stock
 spends those calls reconstructing exact old text to match on — which is the work atto's addressing
 removes. Success is still identical, so this is an efficiency result, not a correctness one.
+A third run went after the specific failure the tool list had: the operations that made an agent
+write a Python script instead of using a tool. Replace every copy of a line, three scattered changes
+in one pass, a two-line block swapped for three lines, the third of three identical lines, a typo in
+one of two similar words, and an exact block deletion. 6 x 3 x 2, in `bench/ab-results-sub.json`:
+
+| | stock | atto |
+|---|---|---|
+| tasks landed | 18/18 | 18/18 |
+| tool calls, total | 47 | 43 |
+| input tokens | 106,867 | 132,212 |
+| shell fallbacks | 1 | 0 |
+| tool errors | 0 | 2 |
+
+The stock run that fell back to the shell did it on *replace every occurrence*: `read` then `bash`, a
+one-line Python `replace()`. The gated run did the same task with `atto_find` then one `atto_sub`
+carrying all three replacements. That is the point of the verb — the operation the tool list could
+not express now has a tool, and the model reaches for it.
+
+The token cost is still real and still prompt-shaped: five tool schemas against two. It is the part
+of this design that has to keep being paid down.
 
 The honest summary: **the gate did not make this model more correct on any task I gave it.** It made
 it cheaper on the tasks where exact-match editing is expensive, and slightly dearer on the trivial

@@ -1,0 +1,703 @@
+{
+  "provider": "opencode-go",
+  "model": "glm-5.3-flash",
+  "runs_per_task": 3,
+  "conditions": [
+    "stock",
+    "atto"
+  ],
+  "tasks": {
+    "delete-block": {
+      "stock": 3,
+      "atto": 3
+    },
+    "fix-typo": {
+      "stock": 3,
+      "atto": 3
+    },
+    "third-of-three-duplicates": {
+      "stock": 3,
+      "atto": 3
+    },
+    "replace-every-occurrence": {
+      "stock": 3,
+      "atto": 3
+    },
+    "scattered-edits-one-pass": {
+      "stock": 3,
+      "atto": 3
+    },
+    "replace-multiline-block": {
+      "stock": 3,
+      "atto": 3
+    }
+  },
+  "results": [
+    {
+      "task": "delete-block",
+      "condition": "stock",
+      "attempt": 1,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "bash",
+        "write"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 4776,
+      "tokens_out": 84,
+      "seconds": 4.76,
+      "note": ""
+    },
+    {
+      "task": "delete-block",
+      "condition": "stock",
+      "attempt": 2,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "read",
+        "edit",
+        "read"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6537,
+      "tokens_out": 136,
+      "seconds": 4.38,
+      "note": ""
+    },
+    {
+      "task": "delete-block",
+      "condition": "stock",
+      "attempt": 3,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "bash",
+        "edit",
+        "bash"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6507,
+      "tokens_out": 130,
+      "seconds": 5.93,
+      "note": ""
+    },
+    {
+      "task": "fix-typo",
+      "condition": "stock",
+      "attempt": 1,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "bash",
+        "read",
+        "edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6542,
+      "tokens_out": 141,
+      "seconds": 4.51,
+      "note": ""
+    },
+    {
+      "task": "fix-typo",
+      "condition": "stock",
+      "attempt": 2,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "read",
+        "edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 4805,
+      "tokens_out": 89,
+      "seconds": 3.08,
+      "note": ""
+    },
+    {
+      "task": "fix-typo",
+      "condition": "stock",
+      "attempt": 3,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "read",
+        "edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 4808,
+      "tokens_out": 90,
+      "seconds": 2.93,
+      "note": ""
+    },
+    {
+      "task": "third-of-three-duplicates",
+      "condition": "stock",
+      "attempt": 1,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "bash",
+        "edit",
+        "read"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6663,
+      "tokens_out": 172,
+      "seconds": 3.61,
+      "note": ""
+    },
+    {
+      "task": "third-of-three-duplicates",
+      "condition": "stock",
+      "attempt": 2,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "bash",
+        "edit",
+        "bash"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6568,
+      "tokens_out": 120,
+      "seconds": 6.8,
+      "note": ""
+    },
+    {
+      "task": "third-of-three-duplicates",
+      "condition": "stock",
+      "attempt": 3,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "bash",
+        "edit",
+        "bash"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6688,
+      "tokens_out": 178,
+      "seconds": 7.15,
+      "note": ""
+    },
+    {
+      "task": "replace-every-occurrence",
+      "condition": "stock",
+      "attempt": 1,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "read",
+        "write",
+        "read"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6494,
+      "tokens_out": 126,
+      "seconds": 8.15,
+      "note": ""
+    },
+    {
+      "task": "replace-every-occurrence",
+      "condition": "stock",
+      "attempt": 2,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "read",
+        "bash"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 1,
+      "tokens_in": 4879,
+      "tokens_out": 164,
+      "seconds": 3.54,
+      "note": ""
+    },
+    {
+      "task": "replace-every-occurrence",
+      "condition": "stock",
+      "attempt": 3,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "bash",
+        "write",
+        "bash"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6663,
+      "tokens_out": 206,
+      "seconds": 6.97,
+      "note": ""
+    },
+    {
+      "task": "scattered-edits-one-pass",
+      "condition": "stock",
+      "attempt": 1,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "read",
+        "edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 4901,
+      "tokens_out": 173,
+      "seconds": 7.4,
+      "note": ""
+    },
+    {
+      "task": "scattered-edits-one-pass",
+      "condition": "stock",
+      "attempt": 2,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "read",
+        "edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 4893,
+      "tokens_out": 145,
+      "seconds": 5.7,
+      "note": ""
+    },
+    {
+      "task": "scattered-edits-one-pass",
+      "condition": "stock",
+      "attempt": 3,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "read",
+        "edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 4899,
+      "tokens_out": 160,
+      "seconds": 4.92,
+      "note": ""
+    },
+    {
+      "task": "replace-multiline-block",
+      "condition": "stock",
+      "attempt": 1,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "read",
+        "edit",
+        "read"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6772,
+      "tokens_out": 175,
+      "seconds": 7.96,
+      "note": ""
+    },
+    {
+      "task": "replace-multiline-block",
+      "condition": "stock",
+      "attempt": 2,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "read",
+        "edit",
+        "read"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6742,
+      "tokens_out": 136,
+      "seconds": 4.35,
+      "note": ""
+    },
+    {
+      "task": "replace-multiline-block",
+      "condition": "stock",
+      "attempt": 3,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "read",
+        "edit",
+        "read"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6730,
+      "tokens_out": 177,
+      "seconds": 4.19,
+      "note": ""
+    },
+    {
+      "task": "delete-block",
+      "condition": "atto",
+      "attempt": 1,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "atto_read",
+        "atto_edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6342,
+      "tokens_out": 88,
+      "seconds": 5.88,
+      "note": ""
+    },
+    {
+      "task": "delete-block",
+      "condition": "atto",
+      "attempt": 2,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "bash",
+        "atto_read",
+        "atto_edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 8490,
+      "tokens_out": 132,
+      "seconds": 7.49,
+      "note": ""
+    },
+    {
+      "task": "delete-block",
+      "condition": "atto",
+      "attempt": 3,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "atto_read",
+        "atto_edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6341,
+      "tokens_out": 93,
+      "seconds": 3.42,
+      "note": ""
+    },
+    {
+      "task": "fix-typo",
+      "condition": "atto",
+      "attempt": 1,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "atto_find",
+        "bash",
+        "atto_sub"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 8673,
+      "tokens_out": 188,
+      "seconds": 6.99,
+      "note": ""
+    },
+    {
+      "task": "fix-typo",
+      "condition": "atto",
+      "attempt": 2,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "atto_find",
+        "atto_edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6385,
+      "tokens_out": 169,
+      "seconds": 7.18,
+      "note": ""
+    },
+    {
+      "task": "fix-typo",
+      "condition": "atto",
+      "attempt": 3,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "atto_find",
+        "read",
+        "atto_edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 8589,
+      "tokens_out": 185,
+      "seconds": 7.54,
+      "note": ""
+    },
+    {
+      "task": "third-of-three-duplicates",
+      "condition": "atto",
+      "attempt": 1,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "atto_find",
+        "atto_read",
+        "atto_edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 8708,
+      "tokens_out": 153,
+      "seconds": 6.83,
+      "note": ""
+    },
+    {
+      "task": "third-of-three-duplicates",
+      "condition": "atto",
+      "attempt": 2,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "atto_read",
+        "atto_edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6402,
+      "tokens_out": 119,
+      "seconds": 3.66,
+      "note": ""
+    },
+    {
+      "task": "third-of-three-duplicates",
+      "condition": "atto",
+      "attempt": 3,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "atto_find",
+        "atto_read",
+        "atto_edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 8704,
+      "tokens_out": 130,
+      "seconds": 7.04,
+      "note": ""
+    },
+    {
+      "task": "replace-every-occurrence",
+      "condition": "atto",
+      "attempt": 1,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "atto_read",
+        "atto_sub",
+        "atto_sub"
+      ],
+      "tool_errors": 1,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 8854,
+      "tokens_out": 164,
+      "seconds": 9.43,
+      "note": ""
+    },
+    {
+      "task": "replace-every-occurrence",
+      "condition": "atto",
+      "attempt": 2,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "atto_find",
+        "atto_sub"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6515,
+      "tokens_out": 129,
+      "seconds": 4.44,
+      "note": ""
+    },
+    {
+      "task": "replace-every-occurrence",
+      "condition": "atto",
+      "attempt": 3,
+      "ok": true,
+      "calls": 3,
+      "call_names": [
+        "atto_read",
+        "atto_sub",
+        "atto_sub"
+      ],
+      "tool_errors": 1,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 8842,
+      "tokens_out": 174,
+      "seconds": 8.69,
+      "note": ""
+    },
+    {
+      "task": "scattered-edits-one-pass",
+      "condition": "atto",
+      "attempt": 1,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "atto_read",
+        "atto_edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6551,
+      "tokens_out": 164,
+      "seconds": 6.14,
+      "note": ""
+    },
+    {
+      "task": "scattered-edits-one-pass",
+      "condition": "atto",
+      "attempt": 2,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "atto_read",
+        "atto_edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6529,
+      "tokens_out": 186,
+      "seconds": 7.57,
+      "note": ""
+    },
+    {
+      "task": "scattered-edits-one-pass",
+      "condition": "atto",
+      "attempt": 3,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "atto_read",
+        "atto_edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6543,
+      "tokens_out": 167,
+      "seconds": 5.96,
+      "note": ""
+    },
+    {
+      "task": "replace-multiline-block",
+      "condition": "atto",
+      "attempt": 1,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "atto_read",
+        "atto_sub"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6615,
+      "tokens_out": 133,
+      "seconds": 3.8,
+      "note": ""
+    },
+    {
+      "task": "replace-multiline-block",
+      "condition": "atto",
+      "attempt": 2,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "atto_read",
+        "atto_sub"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6603,
+      "tokens_out": 134,
+      "seconds": 3.22,
+      "note": ""
+    },
+    {
+      "task": "replace-multiline-block",
+      "condition": "atto",
+      "attempt": 3,
+      "ok": true,
+      "calls": 2,
+      "call_names": [
+        "atto_read",
+        "atto_edit"
+      ],
+      "tool_errors": 0,
+      "blocked": 0,
+      "fallbacks": 0,
+      "tokens_in": 6526,
+      "tokens_out": 131,
+      "seconds": 2.83,
+      "note": ""
+    }
+  ]
+}

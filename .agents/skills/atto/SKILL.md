@@ -11,11 +11,37 @@ One mutation path for existing files: read the lines, hold the rev, send only th
 
 1. `atto_find(path, text)` or `atto_read(path, from?, to?)` — numbered lines and a 12-character
    rev. Find when you know the text; read when you know the region.
-2. `atto_edit(path, rev, changes)` — `{start, end, text}` hunks, all in one atomic transaction,
-   one undo step.
-3. The response is a diff, a new rev, and the new line spans.
+2. `atto_sub(path, rev, changes)` — `{old, new}` text replacement. This is the default verb: use it
+   whenever you are changing text that already exists and you can quote it exactly.
+3. `atto_edit(path, rev, changes)` — `{start, end, text}` hunks for a change that is genuinely a
+   line range: moving a block, deleting by position, inserting at a line.
+4. The response is a diff, a new rev, and the new line spans.
 
 Creating a new file is still `write`. Everything else about an existing file goes through atto.
+
+## Choosing the verb
+
+| You are | Use |
+|---|---|
+| changing text that already exists and you can quote it | `atto_sub` |
+| replacing every copy of a line | `atto_sub` with `all: true` — one call, and it reports the count |
+| making several changes in one pass | one `atto_sub` with several `{old, new}` changes |
+| moving, deleting or inserting by line number | `atto_edit` |
+| rewriting most of a file | `atto_edit` over the whole span, after reading it |
+
+`atto_sub` is the common case, not the specialist case. If you catch yourself reaching for Python
+to `open()` a file, join lines, or `replace()`, that call is `atto_sub` — and it will refuse to do
+the wrong thing where a script would do it silently.
+
+```
+atto_sub(path, rev, changes: [{ old: "retries = 3", new: "retries = 5" }])
+atto_sub(path, rev, changes: [{ old: "TODO", new: "- [ ] task" }], all: true)
+atto_sub(path, rev, changes: [{ old: "a", new: "A" }, { old: "b", new: "B" }])
+```
+
+The `old` text must match byte for byte, including indentation. If it matches nowhere, the call is
+refused. If it matches more than once and you did not say how many, the call is refused and lists
+the line numbers — add surrounding lines to pin one match, or pass `all: true`, or `expect: N`.
 
 ## You may only change lines you were shown
 
@@ -30,7 +56,10 @@ writing a valid patch into the wrong place, and the diff will look plausible.
 
 - No `edit`, no `write` on an existing file, no Python, `sed`, `perl`, `tee`, `git apply`, or
   redirect to change a file. The shell guard blocks these. A block is not a hint to find a
-  different route to the same write — use `atto_edit`.
+  different route to the same write — use `atto_sub` or `atto_edit`.
+- That applies to scripts too. A `python3 - <<'PY'` that reads, transforms and writes is the exact
+  habit `atto_sub` exists to end: it is the same edit, but with no rev, no count check, no atomic
+  write, and nothing to undo.
 - Every hunk in one call is numbered against the rev you passed. Do not renumber between hunks;
   put them all in one call.
 - After the call, the line numbers you are holding are stale. Re-read before the next edit unless
@@ -56,6 +85,12 @@ Retrying the same rev fails the same way.
 atto read FILE             # whole file, numbered, + rev
 atto read FILE 41:48       # just a region
 atto find FILE 'text'      # matching lines + rev, literal
+atto sub FILE --rev 8f3a1c2d9e0b <<'ATTO'
+-old line
++new line
+ATTO
+atto sub FILE --rev R --all      # every match, count reported
+atto sub FILE --rev R --dry      # diff only, writes nothing
 atto patch <<'ATTO'
 file path/to/file
 rev 8f3a1c2d9e0b

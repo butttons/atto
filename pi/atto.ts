@@ -99,6 +99,29 @@ function bodyLines(text: string): string[] {
   return lines;
 }
 
+// subBody renders atto_sub changes as the stdin blocks the CLI parses: the
+// lines to find, then the lines to write, blocks separated by '@@'. Content is
+// prefixed, never escaped, so a line that starts with '-' survives intact.
+type SubChange = { old: string; new: string };
+
+function subBody(changes: SubChange[]): string {
+  return (
+    changes
+      .map((change) => {
+        const oldLines = bodyLines(change.old);
+        if (oldLines.length === 0) {
+          throw new Error("atto_sub: a change needs the existing lines to find");
+        }
+        const newLines = change.new === "" ? [] : bodyLines(change.new);
+        return [
+          ...oldLines.map((l) => `-${l}`),
+          ...newLines.map((l) => `+${l}`),
+        ].join("\n");
+      })
+      .join("\n@@\n") + "\n"
+  );
+}
+
 // atto's plan is line-oriented and literal. A leading + on content is escaped
 // by the plan's own rule: the tool strips exactly one +.
 function planFor(path: string, rev: string, changes: Change[]): string {
@@ -288,7 +311,70 @@ export default function attoExtension(pi: ExtensionAPI) {
       });
     },
   });
-
+  pi.registerTool({
+    name: "atto_sub",
+    label: "atto sub",
+    description:
+      "Replace exact text in an existing file. Each change states the lines to find and the lines to write. Refuses if the text is absent, and refuses if it matches more than once unless you state the count. All changes are one atomic transaction.",
+    promptSnippet: "Replace exact text in an existing file (atto_sub)",
+    promptGuidelines: [
+      "To change text, use atto_sub. Do not use python, sed, perl, or a rewrite for a targeted change.",
+      "Only lines this session showed you can be changed: read or find first, then pass that rev.",
+    ],
+    parameters: Type.Object({
+      path: Type.String({ description: "Existing file to change" }),
+      rev: Type.String({ description: "Rev from atto_read, atto_find, or the previous edit" }),
+      changes: Type.Array(
+        Type.Object({
+          old: Type.String({ description: "Exact existing lines, newline separated, including indentation" }),
+          new: Type.String({ description: "Replacement lines, newline separated. Empty deletes." }),
+        }),
+        { minItems: 1 },
+      ),
+      all: Type.Optional(
+        Type.Boolean({ description: "Replace every match. Default requires exactly one." }),
+      ),
+      expect: Type.Optional(
+        Type.Number({ description: "Require exactly this many matches; refuses otherwise." }),
+      ),
+      dry: Type.Optional(
+        Type.Boolean({ description: "Report the diff and write nothing." }),
+      ),
+    }),
+    async execute(_id, params, _signal, _update, ctx) {
+      // all and expect together is fine: the count is the stronger statement.
+      const key = resolve(ctx.cwd, params.path);
+      const args = ["sub", params.path, "--rev", params.rev];
+      if (params.all) args.push("--all");
+      if (params.expect !== undefined) args.push("--expect", String(params.expect));
+      if (params.dry) args.push("--dry");
+      const body = subBody(params.changes);
+      return withFileMutationQueue(key, async () => {
+        const result = await runAtto(args, ctx.cwd, body);
+        if (result.code !== 0) {
+          stats.failed++;
+          log({ kind: "sub-fail", path: params.path, error: (result.stderr || result.stdout).slice(0, 500) });
+          // The refusal names the count and the lines, so it is the next prompt.
+          throw new Error((result.stderr || result.stdout || "atto sub failed").trim());
+        }
+        if (params.dry) {
+          log({ kind: "sub-dry", path: params.path });
+          return {
+            content: [{ type: "text", text: result.stdout }],
+            details: { path: params.path, dry: true },
+          };
+        }
+        stats.edits++;
+        const rev = parseNewRev(result.stdout);
+        if (rev) grantWindow(key, rev, parseSpans(result.stdout));
+        log({ kind: "sub", path: params.path, bytes: body.length });
+        return {
+          content: [{ type: "text", text: result.stdout }],
+          details: { path: params.path, rev },
+        };
+      });
+    },
+  });
   pi.registerTool({
     name: "atto_undo",
     label: "atto undo",
@@ -321,7 +407,7 @@ export default function attoExtension(pi: ExtensionAPI) {
       return;
     }
     const keep = pi.getActiveTools().filter((name) => name !== "edit" && name !== "apply_patch");
-    for (const name of ["atto_read", "atto_find", "atto_edit", "atto_undo"]) {
+    for (const name of ["atto_read", "atto_find", "atto_sub", "atto_edit", "atto_undo"]) {
       if (!keep.includes(name)) keep.push(name);
     }
     pi.setActiveTools(keep);

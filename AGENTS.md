@@ -68,10 +68,15 @@ shipping a binary nobody tested.
 
 ## Rules
 
-- One mutation path: `atto read` -> snapshot rev -> `atto patch`.
-- Address text by 1-based line spans, never by byte offsets.
+- One mutation path: `atto read` -> snapshot rev -> `atto sub` or `atto patch`.
+  `sub` addresses by exact text and is the default; `patch` addresses by line span and is
+  for block moves and positional inserts. Both check the rev and write atomically.
+- Address text by exact content or by 1-based line spans, never by byte offsets,
+  and never with an `indexOf`-then-count-lines conversion — that is `sub`'s job.
 - Keep the pi gate closed: no `edit`, no `write` on existing files, no Python
-  or sed file edits.
+  or sed file edits. The `sub` verb exists so the gate costs nothing: if a
+  reach for Python is the one thing the tool set cannot express, widen the tool
+  set rather than the gate.
 - Never commit the built binary; `/atto` is ignored.
 - Files under 800 non-test lines. Comments say why, not what. No emoji.
 - A shell-guard fix needs a test case in `guard.test.ts`. Every case in that file is
