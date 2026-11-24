@@ -126,7 +126,12 @@ test("parseMatches reads find output", () => {
   ]);
 });
 
-test("parseSpans reads edit output for chaining", () => {
+test("parseSpans grants the span plus the diff context that was shown", () => {
   const out = "applied /x\nrev aaa -> bbb\n@@ -1,3 +1,3 @@\n a\n-b\n+c\n d\nspan 2..2\n";
-  assert.deepEqual(parseSpans(out), [{ from: 2, to: 2 }]);
+  assert.deepEqual(parseSpans(out), [{ from: 1, to: 5 }]);
+});
+
+test("parseSpans never grants below line 1", () => {
+  const out = "applied /x\nrev aaa -> bbb\nspan 1..2\n";
+  assert.deepEqual(parseSpans(out), [{ from: 1, to: 5 }]);
 });

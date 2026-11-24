@@ -155,6 +155,35 @@ def tasks() -> list[Task]:
         "In big.txt, change the line 'line 387' to 'line 387 changed'.",
         "".join(("line 387 changed\n" if i == 387 else f"line {i}\n") for i in range(1, 401))))
 
+    # The failure modes atto exists for. Exact-match editing is at its weakest
+    # here: an ambiguous old string, a long line to retype, numbering that shifts
+    # after the first edit, a file that moves under the model, whitespace-only
+    # differences, and a deletion whose neighbours must survive.
+    t.append(Task(
+        "third-of-three-duplicates", "dup3.txt", "a\nX\nb\nX\nc\nX\nd\n",
+        "In dup3.txt, change only the third occurrence of the line 'X' (the one after 'c') to 'Y', leaving the other two alone.",
+        "a\nX\nb\nX\nc\nY\nd\n"))
+    t.append(Task(
+        "retype-long-line", "long.py",
+        'config = {"retries": 3, "timeout": 30, "verbose": False, "endpoint": "https://example.invalid/old", "name": "worker"}\n',
+        'In long.py, change the endpoint URL path from /old to /new, changing nothing else on the line.',
+        'config = {"retries": 3, "timeout": 30, "verbose": False, "endpoint": "https://example.invalid/new", "name": "worker"}\n'))
+    t.append(Task(
+        "numbering-shifts-after-insert", "seq.txt", "one\ntwo\nthree\nfour\n",
+        "In seq.txt, first insert a new line 'header' at the very top. Then change the line 'three' to 'THREE'.",
+        "header\none\ntwo\nTHREE\nfour\n"))
+    t.append(Task(
+        "file-moves-under-the-model", "drift.txt", "alpha\nbeta\ngamma\n",
+        "In drift.txt: read the file, then run this bash command: echo note >> drift.txt\nThen change the line 'beta' to 'BETA'.",
+        "alpha\nBETA\ngamma\nnote\n"))
+    t.append(Task(
+        "whitespace-only-change", "indent.txt", "a\n    b\nc\n",
+        "In indent.txt, change the indentation of the line that contains only 'b' from four spaces to two spaces, changing nothing else.",
+        "a\n  b\nc\n"))
+    t.append(Task(
+        "delete-middle-line-exactly", "splice.txt", "head\nA\nB\nC\ntail\n",
+        "In splice.txt, delete only the line 'B', leaving head, A, C and tail exactly as they are.",
+        "head\nA\nC\ntail\n"))
     return t
 
 

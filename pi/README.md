@@ -192,8 +192,25 @@ What the gate did buy, in the same runs: no shell fallbacks, slightly fewer tool
 edit carrying a rev and a diff. The 9 tool errors were all recoverable refusals — a model edits a
 range it has not read, is told so, reads, and retries; none of them lost a task.
 
-What this run does **not** show is the case atto exists for. Single-line edits on a small file are
-the easy path for exact-match editing too. The failures atto is designed against need drift, stale
-readings, duplicate blocks, and edits made between two reads — none of which these tasks create.
-Until a run exercises those, the claim is the narrow one: atto is not slower or less correct here,
-the gate is recoverable, and the cost is prompt tokens.
+Single-line edits on a small file are the easy path for exact-match editing too, so the second run
+went after the shapes atto exists for: the third of three identical lines, a 130-character line to
+retype in full, numbering that shifts after an insert, a file that changes under the model between
+its read and its edit, a whitespace-only edit, and a deletion whose neighbours must survive. 6
+tasks x 3 runs x 2 conditions:
+
+| | stock | atto |
+|---|---|---|
+| tasks landed | 18/18 | 18/18 |
+| tool calls, total | 61 | 49 |
+| input tokens | 130,129 | 124,360 |
+| mean wall time | 9.0 s | 8.2 s |
+| tool errors | 2 | 0 |
+
+The direction flips here: atto took 20% fewer calls, 4.5% fewer input tokens, and no retries. Stock
+spends those calls reconstructing exact old text to match on — which is the work atto's addressing
+removes. Success is still identical, so this is an efficiency result, not a correctness one.
+
+The honest summary: **the gate did not make this model more correct on any task I gave it.** It made
+it cheaper on the tasks where exact-match editing is expensive, and slightly dearer on the trivial
+ones before the prompt was trimmed. The correctness argument for atto remains theoretical: it needs
+a model that actually mis-edits, and `glm-5.3-flash` did not.

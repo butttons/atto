@@ -177,15 +177,11 @@ export default function attoExtension(pi: ExtensionAPI) {
     description:
       "Read a file with 1-based line numbers and a snapshot rev. Call this before atto_edit; the rev is the guard that makes the edit precise.",
     promptSnippet: "Read a file with line numbers and a snapshot rev (atto_read)",
-    promptGuidelines: [
-      "Call atto_read on the region you will change; keep its rev for atto_edit.",
-      "Use atto_read, not read, when you are about to edit.",
-      "If you know the text you are changing, atto_find returns the line numbers without you having to count.",
-    ],
+    promptGuidelines: ["Call atto_read on the region you will change; keep its rev for atto_edit."],
     parameters: Type.Object({
-      path: Type.String({ description: "File to read, relative to the workspace or absolute" }),
-      from: Type.Optional(Type.Number({ description: "1-based first line (inclusive)" })),
-      to: Type.Optional(Type.Number({ description: "1-based last line (inclusive)" })),
+      path: Type.String({ description: "File to read" }),
+      from: Type.Optional(Type.Number({ description: "1-based first line" })),
+      to: Type.Optional(Type.Number({ description: "1-based last line" })),
     }),
     async execute(_id, params, _signal, _update, ctx) {
       if (params.to !== undefined && params.from === undefined) {
@@ -218,16 +214,11 @@ export default function attoExtension(pi: ExtensionAPI) {
     name: "atto_find",
     label: "atto find",
     description:
-      "Find literal text in a file and return the matching numbered lines plus a snapshot rev. Use it to get the line numbers for a change instead of counting lines yourself.",
+      "Find literal text in a file and return the matching numbered lines plus a snapshot rev. Use it to get line numbers instead of counting them.",
     promptSnippet: "Find text and get line numbers plus a rev (atto_find)",
-    promptGuidelines: [
-      "Use atto_find to get line numbers for a change; never count lines from memory, offsets, or an earlier edit.",
-      "atto_find matches literally and case-sensitively; the match count tells you if the text is ambiguous.",
-      "The rev atto_find returns works with atto_edit.",
-    ],
     parameters: Type.Object({
-      path: Type.String({ description: "File to search, relative to the workspace or absolute" }),
-      text: Type.String({ description: "Literal text to find, case-sensitive. Not a regex." }),
+      path: Type.String({ description: "File to search" }),
+      text: Type.String({ description: "Literal text, case-sensitive, not a regex" }),
     }),
     async execute(_id, params, _signal, _update, ctx) {
       const result = await runAtto(["find", params.path, params.text], ctx.cwd);
@@ -250,21 +241,17 @@ export default function attoExtension(pi: ExtensionAPI) {
       "Apply one or more line-addressed changes to an existing file. Change {start,end} are 1-based inclusive; end=start-1 inserts before start; empty text deletes. All changes are one atomic transaction. Returns a diff, a new rev, and the new line spans.",
     promptSnippet: "Apply line-addressed changes to an existing file (atto_edit)",
     promptGuidelines: [
-      "Never use edit, write, Python, sed, or perl to change an existing file; use atto_edit.",
-      "Pass the rev from atto_read or atto_find. If atto_edit reports a conflict, re-read and retry with the new rev.",
-      "You may only change lines this session has shown you: read the range, or find the text, then pass that rev.",
-      "Put every independent change to a file in one atto_edit call; it is one transaction and one undo step.",
-      "An empty text deletes start..end. To insert before line N, set start=N and end=N-1.",
-      "A note about identical adjacent lines means you duplicated a block; fix it in the next call.",
+      "Never use edit, write, sed, or a redirect on an existing file; use atto_edit.",
+      "Only lines this session showed you can be changed: read or find first, then pass that rev.",
     ],
     parameters: Type.Object({
       path: Type.String({ description: "Existing file to change" }),
-      rev: Type.String({ description: "Snapshot rev returned by atto_read or atto_find" }),
+      rev: Type.String({ description: "Rev from atto_read or atto_find" }),
       changes: Type.Array(
         Type.Object({
-          start: Type.Number({ description: "1-based first line, inclusive" }),
-          end: Type.Number({ description: "1-based last line, inclusive; start-1 inserts before start" }),
-          text: Type.String({ description: "Replacement text. Empty deletes when end >= start." }),
+          start: Type.Number({ description: "1-based first line" }),
+          end: Type.Number({ description: "1-based last line; start-1 inserts before start" }),
+          text: Type.String({ description: "New text. Empty deletes start..end." }),
         }),
         { minItems: 1 },
       ),

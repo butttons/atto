@@ -20,6 +20,9 @@ export type Grant = { rev: string; regions: Region[] };
 
 export const WHOLE: Region = { from: 1, to: Number.POSITIVE_INFINITY };
 
+/** The diff prints this many lines of context around each change. */
+const CONTEXT = 3;
+
 export function wholeFile(): Region[] {
   return [WHOLE];
 }
@@ -103,7 +106,11 @@ export function parseMatches(stdout: string): Region[] {
   return regions;
 }
 
-/** parseSpans reads the spans an edit wrote, so chaining stays possible. */
+/**
+ * parseSpans reads what an edit wrote. The diff also prints three lines of
+ * context on each side, so those are shown too and stay editable; without that,
+ * editing two neighbouring regions would need a read between every call.
+ */
 export function parseSpans(stdout: string): Region[] {
   const regions: Region[] = [];
   for (const line of stdout.split("\n")) {
@@ -111,7 +118,7 @@ export function parseSpans(stdout: string): Region[] {
     if (!m) continue;
     const from = Number(m[1]);
     const to = Number(m[2]);
-    if (to >= from) regions.push({ from, to });
+    if (to >= from) regions.push({ from: Math.max(1, from - CONTEXT), to: to + CONTEXT });
   }
   return regions;
 }
