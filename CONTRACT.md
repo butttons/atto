@@ -73,6 +73,26 @@ the id. The id is `sha256(absolute_path + "\0" + content)[:12]`, so a snapshot c
 another file's.
 
 ```
+atto find FILE TEXT
+```
+
+The same header, then only the lines containing `TEXT`:
+
+```
+file path/to/file.rs
+rev 8f3a1c2d9e0b
+lines 335
+matches 2
+41|    pub fn apply(&mut self, tx: Transaction, kind: Kind) -> Result<(), ChangeError> {
+108|    pub fn apply(&mut self, batch: Batch) -> Result<(), ChangeError> {
+```
+
+Two matches and two numbers: either the text is unique enough to address, or the agent has learned
+that it is not before writing anything. The match is literal and case-sensitive, because a selector
+that guesses is worse than no selector. Counting lines by hand is where an agent gets the address
+wrong, so the tool does the counting.
+
+```
 atto patch < plan
 ```
 
@@ -138,16 +158,19 @@ Rules:
 ## CLI
 
 ```
-atto read FILE [FROM:TO]     numbered lines + snapshot id
-atto stat FILE               snapshot id, line count, byte count (records the snapshot)
-atto patch                   apply a plan from stdin
-atto undo FILE               revert the last transaction, if the file still matches
-atto log [FILE]              recent transactions
+atto read FILE [FROM:TO]         numbered lines + snapshot id
+atto find FILE TEXT              matching lines + snapshot id (literal, case-sensitive)
+atto stat FILE                   snapshot id, line count, byte count (records the snapshot)
+atto patch [--allow-duplicate]   apply a plan from stdin
+atto undo FILE                   revert the last transaction, if the file still matches
+atto log [FILE]                  recent transactions
 atto version
 ```
 
-`read` caps output at 2,000 lines unless a range is given, and says so in the header. Data goes to
-stdout, diagnostics to stderr. Exit 0 on success, 1 on any failure, 2 on usage.
+`read` caps output at 2,000 lines unless a range is given, and says so in the header. `find`
+returns only the matching lines, so locating a change costs a fraction of a full read and the agent
+never counts lines by hand. Data goes to stdout, diagnostics to stderr. Exit 0 on success, 1 on any
+failure, 2 on usage.
 
 ## Guarantees
 

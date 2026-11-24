@@ -35,6 +35,11 @@ const allowed = [
   ["plain read", "git log --oneline | head -5"],
   ["python -c read only", "python3 -c \"print(open('f').read())\""],
   ["python -c counting", "python3 -c \"s=open('f').read(); print(s.count('a'))\""],
+  // A read path containing a "w" is not a write mode; this blocked a real check.
+  ["python -c read of a workflows path", `python3 -c "print(open('/repo/.github/workflows/x.yml').read())"`],
+  ["python -c read of a workspace path", `python3 -c "print(open('/w/work/build.log').read())"`],
+  // A subshell cd was invisible, so its redirect looked like a repo write.
+  ["subshell cd scratch redirect", "(cd /tmp/reltest && sha256sum ./*.tar.gz > SHA256SUMS)"],
 ] as const;
 
 const blocked = [
@@ -42,6 +47,8 @@ const blocked = [
   ["python -c write", "python3 -c \"open('a','w').write('x')\""],
   ["python -c pathlib write", "python3 -c \"from pathlib import Path; Path('a').write_text('x')\""],
   ["python -c truncate", "python3 -c \"open('a','w').close()\""],
+  ["python -c append", "python3 -c \"open('a', 'a').write('x')\""],
+  ["python -c binary write", "python3 -c \"open('a', 'wb')\""],
   ["sed -i", "sed -i '' s/a/b/ main.go"],
   ["perl -pi", "perl -pi -e s/a/b/ main.go"],
   ["repo redirect", "echo hi > main.go"],

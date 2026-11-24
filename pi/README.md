@@ -4,7 +4,7 @@ Make pi edit through atto, and make the fallback visible.
 
 The extension is a gate, not a request:
 
-- registers `atto_read`, `atto_edit`, `atto_undo`
+- registers `atto_read`, `atto_find`, `atto_edit`, `atto_undo`
 - removes the built-in `edit` and `apply_patch` from the model's tool set
 - blocks `edit`/`apply_patch` if a codemode script or a resumed session reaches them
 - blocks `write` when the target already exists (new files are still fine)
@@ -13,8 +13,10 @@ The extension is a gate, not a request:
   except `/tmp`, `target/`, and `/dev/*`
 - does not mistake code for a redirect: `=>`, `>=` and `>` inside quotes are left alone, and a
   redirect after `cd /tmp` is recognised as scratch
-- logs every atto edit, failure, and blocked fallback to `$ATTO_HOME/pi.jsonl`, so "is the agent
-  actually using it?" is a number, not a hope
+- refuses an edit to lines this session never showed the model, so a rev cannot authorize changes
+  to a region the model only remembers
+- logs every atto edit, failure, refusal, and blocked fallback to `$ATTO_HOME/pi.jsonl`, so "is the
+  agent actually using it?" is a number, not a hope
 
 ## Build and load
 
@@ -23,7 +25,7 @@ go build -o atto ./cmd/atto
 
 # one invocation
 ATTO_BIN="$PWD/atto" pi --extension "$PWD/pi/atto.ts" \
-  --tools read,bash,grep,find,ls,atto_read,atto_edit,atto_undo
+  --tools read,bash,grep,find,ls,atto_read,atto_find,atto_edit,atto_undo
 
 # or make it the default: symlink it into the personal extensions directory
 ln -s "$PWD/pi/atto.ts" ~/.pi/agent/extensions/atto.ts
@@ -35,7 +37,7 @@ If you use `settings.json`, add the extension path and put the same allowlist in
 ```jsonc
 {
   "extensions": ["/absolute/path/to/atto/pi/atto.ts"],
-  "defaultTools": ["read", "bash", "grep", "find", "ls", "atto_read", "atto_edit", "atto_undo"]
+  "defaultTools": ["read", "bash", "grep", "find", "ls", "atto_read", "atto_find", "atto_edit", "atto_undo"]
 }
 ```
 
@@ -57,13 +59,34 @@ only on a machine where the package is not installed.
 
 ## The loop the model is taught
 
-1. `atto_read(path, from, to)` — numbered lines plus a 12-character rev.
+1. `atto_find(path, text)` or `atto_read(path, from, to)` — the numbered lines, plus a rev.
 2. `atto_edit(path, rev, changes)` — `{start, end, text}` hunks, all in one transaction.
-3. The result is a diff, a new rev, and the new line spans. Chain the next edit with the new rev,
-   or `atto_read` again if the file moved.
+3. The result is a diff, a new rev, and the new line spans.
 
 `end = start - 1` inserts before `start`. Empty `text` deletes `start..end`. A conflict writes
 nothing and returns the contested lines; the model re-reads and retries.
+
+## What a rev authorizes
+
+A rev proves the file has not moved. It does not prove the model looked at the lines it is
+changing, and a model can write a perfectly valid patch for the wrong place: addresses held in
+memory drift after the first edit, and a one-line read still returns a whole-file rev.
+
+So the extension remembers what it has shown, per path and rev, and refuses anything else:
+
+| The model did | It may then change |
+|---|---|
+| `atto_read(path)` (whole file, not truncated) | anything |
+| `atto_read(path, 40, 50)` | 40..50, or insert at either edge |
+| `atto_read(path)` on a 5,000-line file | 1..2000, the lines actually printed |
+| `atto_find(path, text)` | the lines it matched |
+| `atto_edit(...)` | the spans it just wrote |
+| `atto_undo(path)` | nothing, until the file is read again |
+| nothing | nothing |
+
+A refusal writes nothing and says which lines were shown, so recovering costs one `atto_read` or
+`atto_find` rather than a guess. This is per-session on purpose: a fresh session has shown nothing,
+so it reads before it edits.
 
 ## Check that it is working
 
@@ -77,26 +100,30 @@ atto edits:   9
 atto undos:   0
 blocked:      2
 failed edits: 0
+refused:      1
 log:          ~/.local/state/atto/pi.jsonl
 ```
 
-The target is `blocked: 0` and `failed edits: 0` after a few real tasks. A blocked count is not a
-failure of the extension; it is the guard catching a fallback the model tried. The log has the
-reason.
+The target is `blocked: 0`, `refused: 0` and `failed edits: 0` after a few real tasks. A blocked
+count is the shell guard catching a fallback the model tried; a refusal is the window gate catching
+an edit to lines it never read. Both are the tool working, and both name their reason in the log.
+Repeated refusals mean the prompt guidance is not landing, not that the gate is wrong.
 
 ## Guard tests
 
-The shell guard is a pure predicate in `guard.ts`, so it is tested directly instead of by driving a
-model at it:
+Both guards are pure modules, tested directly instead of by driving a model at them:
 
 ```sh
-node --experimental-strip-types --test pi/guard.test.ts
-# or: npm run test:guard
+npm test          # guard.test.ts and windows.test.ts, 50 cases, no model involved
 ```
 
-Every case is a false positive or a bypass that actually happened: a scratch redirect after
-`cd /tmp`, `2>&1`, `=>`, `>=`, a quoted `>` and `/dev/null` must pass; a python heredoc, a writing
-`python3 -c`, `sed -i`, `tee`, and a write anywhere outside scratch must not.
+Every shell-guard case is a false positive or a bypass that actually happened: a scratch redirect
+after `cd /tmp`, `2>&1`, `=>`, `>=`, a quoted `>` and `/dev/null` must pass; a python heredoc, a
+writing `python3 -c`, `sed -i`, `tee`, and a write anywhere outside scratch must not.
+
+`windows.ts` covers the addressing gate: a span inside one region, a span spanning a gap, a
+one-line read that does not authorize a block, an insertion at the edge of the shown range, a stale
+rev, and reading `truncated 2000/5000` as `1..2000` rather than the range that was asked for.
 
 ## Escape hatch
 
@@ -115,7 +142,7 @@ pi --print --mode json --no-session --tools read,bash,edit,write \
 
 # B: atto enforced
 ATTO_BIN="$PWD/atto" pi --print --mode json --no-session --extension "$PWD/pi/atto.ts" \
-  --tools read,bash,atto_read,atto_edit,atto_undo \
+  --tools read,bash,atto_read,atto_find,atto_edit,atto_undo \
   "In work/f.rs, change line 2 to BRAVO."
 ```
 

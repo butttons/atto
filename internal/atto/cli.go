@@ -9,16 +9,23 @@ import (
 	"strings"
 )
 
-const version = "0.1.0"
+// version is a var so release builds can stamp the tag: -X ...atto.version=$TAG
+var version = "0.1.0"
 
 const readCap = 2000
+
+// findCap keeps a broad search from returning a whole file to a model that
+// asked a vague question.
+const findCap = 200
 
 const usage = `atto — precise, agent-first file editing
 
 usage:
   atto read FILE [FROM:TO]   numbered lines + snapshot id
+  atto find FILE TEXT        matching lines + snapshot id (literal, case-sensitive)
   atto stat FILE             snapshot id, line count, byte count
-  atto patch                 apply a plan from stdin (see CONTRACT.md)
+  atto patch [--allow-duplicate]
+                             apply a plan from stdin (see CONTRACT.md)
   atto undo FILE             revert the last transaction, if the file still matches
   atto log [FILE]            recent transactions
   atto version
@@ -34,14 +41,14 @@ func Run(args []string) int {
 	switch args[0] {
 	case "read":
 		err = cmdRead(args[1:])
+	case "find":
+		err = cmdFind(args[1:])
 	case "stat":
 		err = cmdStat(args[1:])
 	case "patch":
 		err = cmdPatch(args[1:])
 	case "undo":
 		err = cmdUndo(args[1:])
-	case "log":
-		err = cmdLog(args[1:])
 	case "version", "--version", "-V":
 		fmt.Printf("atto %s\n", version)
 	case "help", "--help", "-h":
@@ -159,8 +166,14 @@ func cmdStat(args []string) error {
 }
 
 func cmdPatch(args []string) error {
-	if len(args) != 0 {
-		return fmt.Errorf("patch reads the plan from stdin and takes no arguments")
+	allowDuplicate := false
+	for _, a := range args {
+		switch a {
+		case "--allow-duplicate":
+			allowDuplicate = true
+		default:
+			return fmt.Errorf("patch reads the plan from stdin; %q is not a flag it knows", a)
+		}
 	}
 	b, err := io.ReadAll(os.Stdin)
 	if err != nil {
@@ -170,6 +183,7 @@ func cmdPatch(args []string) error {
 	if err != nil {
 		return err
 	}
+	plan.AllowDuplicate = allowDuplicate
 	abs, err := resolvePath(plan.File)
 	if err != nil {
 		return err
@@ -181,6 +195,50 @@ func cmdPatch(args []string) error {
 	fmt.Print(res.Diff)
 	for _, span := range res.Spans {
 		fmt.Printf("span %s\n", span)
+	}
+	for _, note := range res.Notes {
+		fmt.Println(note)
+	}
+	return nil
+}
+
+func cmdFind(args []string) error {
+	if len(args) != 2 {
+		return fmt.Errorf("find needs FILE TEXT")
+	}
+	if args[1] == "" {
+		return fmt.Errorf("find needs a non-empty text")
+	}
+	abs, err := resolvePath(args[0])
+	if err != nil {
+		return err
+	}
+	raw, err := readFile(abs)
+	if err != nil {
+		return err
+	}
+	text, _, _, err := decode(raw)
+	if err != nil {
+		return fmt.Errorf("%s: %w", abs, err)
+	}
+	lines, _ := splitLines(text)
+	rev := snapshotRev(abs, raw)
+	if err := storeSnapshot(rev, raw); err != nil {
+		return fmt.Errorf("store snapshot: %w", err)
+	}
+	hits := findLines(lines, args[1])
+	out := bufio.NewWriter(os.Stdout)
+	defer out.Flush()
+	fmt.Fprintf(out, "file %s\n", abs)
+	fmt.Fprintf(out, "rev %s\n", rev)
+	fmt.Fprintf(out, "lines %d\n", len(lines))
+	fmt.Fprintf(out, "matches %d\n", len(hits))
+	if len(hits) > findCap {
+		fmt.Fprintf(out, "truncated %d/%d\n", findCap, len(hits))
+		hits = hits[:findCap]
+	}
+	for _, n := range hits {
+		fmt.Fprintf(out, "%d|%s\n", n, lines[n-1])
 	}
 	return nil
 }

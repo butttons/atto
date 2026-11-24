@@ -16,7 +16,8 @@ go install ./cmd/atto    # Go 1.22+, standard library only; puts atto in $GOBIN
 
 ```sh
 atto read FILE [FROM:TO]   # numbered lines + snapshot rev
-atto stat FILE             # just the rev, ~120 bytes
+atto find FILE TEXT        # matching lines + rev (literal, case-sensitive)
+atto stat FILE             # line and byte counts, no lines
 atto patch < plan          # one atomic transaction
 atto undo FILE             # revert the last transaction
 atto log [FILE]            # recent transactions

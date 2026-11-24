@@ -27,6 +27,7 @@ type patchResult struct {
 	NewRev string
 	Diff   string
 	Spans  []string
+	Notes  []string
 }
 
 // reconcile maps every hunk from snapshot coordinates to live coordinates.
@@ -201,6 +202,13 @@ func applyPlan(abs string, plan *Plan, rawPlan string) (*patchResult, error) {
 	liveLines, liveTrail := splitLines(liveText)
 	snapLines, _ := splitLines(snapText)
 	plan.resolveTail(len(snapLines))
+	if !plan.AllowDuplicate {
+		for _, h := range plan.Hunks {
+			if where, dup := duplicateInsert(h, snapLines); dup {
+				return nil, fmt.Errorf("hunk at plan line %d inserts a block identical to %s of the snapshot; nothing written (pass --allow-duplicate if that is really the intent)", h.Line, where)
+			}
+		}
+	}
 
 	var mapped []appliedHunk
 	if slices.Equal(liveLines, snapLines) {
@@ -246,7 +254,14 @@ func applyPlan(abs string, plan *Plan, rawPlan string) (*patchResult, error) {
 		return nil, fmt.Errorf("wrote the file but could not journal the transaction: %w", err)
 	}
 	diff, spans := renderDiff(abs, plan.Rev, newRev, liveLines, mapped)
-	return &patchResult{Path: abs, OldRev: plan.Rev, NewRev: newRev, Diff: diff, Spans: spans}, nil
+	return &patchResult{
+		Path:   abs,
+		OldRev: plan.Rev,
+		NewRev: newRev,
+		Diff:   diff,
+		Spans:  spans,
+		Notes:  duplicateNotes(liveLines, newLines),
+	}, nil
 }
 
 func conflictReport(abs, rev string, conflicts []conflict, snap, live []string) string {

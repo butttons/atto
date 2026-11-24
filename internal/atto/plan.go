@@ -19,9 +19,10 @@ type Hunk struct {
 }
 
 type Plan struct {
-	File  string
-	Rev   string
-	Hunks []Hunk
+	File           string
+	Rev            string
+	Hunks          []Hunk
+	AllowDuplicate bool // set by the CLI only; never parsed from the plan
 }
 
 func parsePlan(text string) (*Plan, error) {

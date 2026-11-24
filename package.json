@@ -10,7 +10,9 @@
     "skills": ["./.agents/skills/atto"]
   },
   "scripts": {
-    "test:guard": "node --experimental-strip-types --test pi/guard.test.ts"
+    "test": "node --experimental-strip-types --test pi/*.test.ts",
+    "test:guard": "node --experimental-strip-types --test pi/guard.test.ts",
+    "test:windows": "node --experimental-strip-types --test pi/windows.test.ts"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",

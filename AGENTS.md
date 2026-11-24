@@ -11,6 +11,7 @@ and why is in `README.md`; the format is in `CONTRACT.md`.
 | `internal/atto/` | `package atto` — the engine; `Run(args) int` is the only entry point |
 | `pi/atto.ts` | the pi extension: gates the model onto atto |
 | `pi/guard.ts` | the shell guard, a pure predicate |
+| `pi/windows.ts` | what a rev authorizes: the lines a tool actually showed |
 | `CONTRACT.md` | the five invariants, plan grammar, guarantees, benchmarks |
 | `bench/` | two harnesses: `bench.py` quick, `tools_bench.py` real CLIs |
 | `.agents/skills/atto/` | the skill a model loads before editing a file |
@@ -24,7 +25,7 @@ not a public API, and tests sit next to what they test.
 go build -o atto ./cmd/atto    # ~/.local/bin/atto symlinks here
 go test ./...
 go vet ./...
-npm run test:guard            # shell guard, 27 cases, no model involved
+npm test                      # both pi guards, 50 cases, no model involved
 ```
 
 Benchmarks:
@@ -48,6 +49,22 @@ python3 bench/tools_bench.py --atto "$PWD/atto" --hashline PATH --snapedit-cli P
 Also: extensions load at session start, so a guard change never takes effect in the
 session that made it. Prove it with a fresh headless run
 (`pi --print --mode json --no-session ...`), not by reasoning.
+
+## Releases
+
+`.github/workflows/release.yml` runs on `release: published` and nothing else, so a
+push never produces a binary. To cut one:
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+gh release create v0.1.0 --generate-notes
+```
+
+Publishing builds darwin and linux for amd64 and arm64, stamps the tag into
+`atto version`, and attaches the tarballs plus `SHA256SUMS`. The workflow runs
+`go vet` and `go test` first, so a red suite blocks the release rather than
+shipping a binary nobody tested.
 
 ## Rules
 

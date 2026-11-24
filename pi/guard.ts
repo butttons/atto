@@ -10,8 +10,9 @@
 const SHELL_EDIT_PATTERNS = [
   /\bpython[0-9.]*\s+-\s*<</,
   // python -c is blocked when the inline code can write, not merely when it
-  // mentions a file: `print(open('f').read())` is still allowed.
-  /\bpython[0-9.]*\s+-c\b[^\n]*(\bwrite_text\b|\.write\b|\.writeFileSync\b|open\s*\([^)]*['"][^'"]*[w+][^'"]*['"]|shutil\.|os\.remove|os\.rename|\.unlink\b|subprocess)/,
+  // mentions a file: `print(open('f').read())` is still allowed, and a path
+  // holding a "w" is not a mode. Only a real mode argument counts.
+  /\bpython[0-9.]*\s+-c\b[^\n]*(\bwrite_text\b|\.write\b|\.writeFileSync\b|open\s*\([^)]*,\s*['"][rwxabt+]{1,3}['"]|shutil\.|os\.remove|os\.rename|\.unlink\b|subprocess)/,
   /\bsed\s+-i\b/,
   /\bperl\s+-[A-Za-z]*i\b/,
   /\bgit\s+apply\b/,
@@ -32,10 +33,12 @@ function stripQuoted(command: string): string {
 }
 
 // A command may cd before it writes; resolve relative targets against the last
-// directory it enters. A heuristic, and it errs toward blocking.
+// directory it enters. The `(` alternative covers subshells: `(cd dist && ...
+// > SHA256SUMS)` is a scratch write, and missing the cd made it look like a
+// repo write. A heuristic, and it errs toward blocking.
 export function redirectBase(command: string, cwd: string, resolvePath: (a: string, b: string) => string): string {
   let base = cwd;
-  for (const m of command.matchAll(/(?:^|[;&|]\s*)cd\s+([^\s;&|]+)/g)) {
+  for (const m of command.matchAll(/(?:^|[;&|(]\s*)cd\s+([^\s;&|)]+)/g)) {
     base = resolvePath(base, m[1]);
   }
   return base;
