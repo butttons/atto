@@ -10,7 +10,7 @@ import (
 )
 
 // version is a var so release builds can stamp the tag: -X ...atto.version=$TAG
-var version = "0.1.0"
+var version = "0.1.1"
 
 const readCap = 2000
 

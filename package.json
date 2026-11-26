@@ -1,6 +1,6 @@
 {
   "name": "atto",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Agent-first, snapshot-guarded file editing: a headless binary and a pi extension.",
   "keywords": ["pi-package", "agent", "editing"],
   "type": "module",
