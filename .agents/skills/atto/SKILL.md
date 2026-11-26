@@ -47,7 +47,9 @@ the line numbers — add surrounding lines to pin one match, or pass `all: true`
 
 The rev is bound to the lines the tool returned. Reading 40..50 authorizes 40..50, not the file.
 Find authorizes the lines it matched. An edit authorizes the spans it just wrote. Anything else is
-refused with the ranges that were shown, and nothing is written.
+refused, and the refusal names the exact `atto_read` that would have authorized it. A `to` past the
+end of the file is clamped to the last line and the output says `clamped`, so that mistake costs no
+second call.
 
 This is not a formality. A model that edits from remembered line numbers is one edit away from
 writing a valid patch into the wrong place, and the diff will look plausible.
@@ -76,9 +78,9 @@ of a block pasted twice. Fix it in the next call; do not explain it away.
 
 ## A conflict or a refusal is information
 
-A stale rev writes nothing and returns the contested lines. A refusal names the range that had not
-been shown. Both are fixed by one `atto_read` or `atto_find` and a retry with the rev it returns.
-Retrying the same rev fails the same way.
+A stale rev writes nothing and returns the contested lines. A region refusal names the range that
+had not been shown and the `atto_read(path, from, to)` that fixes it. Both are one call and a retry
+with the rev it returns. Retrying the same rev fails the same way.
 
 ## CLI, when there is no pi tool
 

@@ -7,6 +7,7 @@ import {
   parseMatches,
   parseShown,
   parseSpans,
+  refusal,
   wholeFile,
   type Grant,
 } from "./windows.ts";
@@ -134,4 +135,40 @@ test("parseSpans grants the span plus the diff context that was shown", () => {
 test("parseSpans never grants below line 1", () => {
   const out = "applied /x\nrev aaa -> bbb\nspan 1..2\n";
   assert.deepEqual(parseSpans(out), [{ from: 1, to: 5 }]);
+});
+
+// A read past EOF is clamped by atto, so the request authorizes more lines than
+// were printed. Granting the request would let the model edit lines it never saw.
+test("parseShown trusts the printed window over the requested one", () => {
+  const out = "file /x\nrev aaa\nlines 239\nshowing 228..239\nclamped 240->239\n228|a\n";
+  assert.deepEqual(parseShown(out, { from: 228, to: 240 }), [{ from: 228, to: 239 }]);
+});
+
+// The refusal has to name the read, not describe it: a model told to "read the
+// range you are changing" guesses the numbers and burns a second call.
+test("refusal names the exact read that would authorize the edit", () => {
+  const msg = refusal("/w/a.ts", "aaa", {
+    reason: "region",
+    start: 40,
+    end: 60,
+    regions: [{ from: 12, to: 38 }],
+  });
+  assert.match(msg, /nothing was written/);
+  assert.match(msg, /lines 40\.\.60 had not been shown to you/);
+  assert.match(msg, /this session showed 12\.\.38/);
+  assert.match(msg, /atto_read \{path: "\/w\/a\.ts", from: 40, to: 60\}/);
+});
+
+// An insertion before line N is authorized by seeing line N itself.
+test("refusal points an insertion at the line it sits before", () => {
+  const msg = refusal("/w/a.ts", "aaa", { reason: "region", start: 7, end: 6, regions: [] });
+  assert.match(msg, /the insertion before line 7/);
+  assert.match(msg, /atto_read \{path: "\/w\/a\.ts", from: 7, to: 7\}/);
+});
+
+// A lost rev is a different recovery: no range read fixes it, a re-read does.
+test("refusal for a replaced rev asks for the file again", () => {
+  const msg = refusal("/w/a.ts", "aaa", { reason: "rev", start: 0, end: 0, regions: [] });
+  assert.match(msg, /rev aaa was not issued for this file in this session/);
+  assert.match(msg, /atto_read, or locate the text with atto_find/);
 });

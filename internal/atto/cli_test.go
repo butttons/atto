@@ -83,3 +83,33 @@ func TestLogWithoutHistoryIsNotAnError(t *testing.T) {
 		t.Errorf("log on an empty journal printed %q", out)
 	}
 }
+
+// A read that asks for a few lines past EOF is the mistake that actually
+// happens: in one machine's session log all 25 refused ranges were this, and
+// every one cost the model a second read. Clamp the window instead, print the
+// one it showed, and say it clamped so the model's next request is informed.
+func TestReadClampsRangePastEOF(t *testing.T) {
+	abs, _ := fixture(t, "one\ntwo\nthree\n")
+	out, stderr, code := capture(t, "read", abs, "2:99")
+	if code != 0 {
+		t.Fatalf("read 2:99 on a 3-line file exited %d: %q", code, stderr)
+	}
+	for _, want := range []string{"showing 2..3", "clamped 99->3"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("clamped read is missing %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "4|") {
+		t.Errorf("clamped read printed a line that does not exist:\n%s", out)
+	}
+}
+
+// A range with nothing in it is still a refusal: clamping from beyond EOF would
+// hand back an empty window and call it success.
+func TestReadRefusesRangeFromPastEOF(t *testing.T) {
+	abs, _ := fixture(t, "one\ntwo\n")
+	_, stderr, code := capture(t, "read", abs, "9:12")
+	if code == 0 || !strings.Contains(stderr, "outside the file") {
+		t.Fatalf("read 9:12 on a 2-line file: code=%d stderr=%q", code, stderr)
+	}
+}

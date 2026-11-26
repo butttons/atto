@@ -98,8 +98,17 @@ func cmdRead(args []string) error {
 	if len(lines) == 0 {
 		from, to = 1, 0
 	}
+	// Asking for a few lines past EOF is the read mistake that actually happens:
+	// the model's idea of the file length was off by one to a handful of lines,
+	// never by a whole file. Every one of the 25 refused ranges in one machine's
+	// session log was this, and every one cost a re-read. Clamp, and say so.
+	asked := to
+	clamped := hasRange && to > len(lines)
+	if clamped {
+		to = len(lines)
+	}
 	if from < 1 || to > len(lines) || (len(lines) > 0 && from > to) {
-		return fmt.Errorf("range %d:%d is outside the file (%d lines)", from, to, len(lines))
+		return fmt.Errorf("range %d:%d is outside the file (%d lines)", from, asked, len(lines))
 	}
 
 	out := bufio.NewWriter(os.Stdout)
@@ -113,6 +122,9 @@ func cmdRead(args []string) error {
 		fmt.Fprintf(out, "truncated %d/%d\n", to, len(lines))
 	} else if hasRange {
 		fmt.Fprintf(out, "showing %d..%d\n", from, to)
+		if clamped {
+			fmt.Fprintf(out, "clamped %d->%d\n", asked, to)
+		}
 	}
 	for n := from; n <= to; n++ {
 		fmt.Fprintf(out, "%d|%s\n", n, lines[n-1])

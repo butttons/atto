@@ -40,7 +40,7 @@ pi: `edit` works, nothing is guarded, and no atto tool can run.
 go build -o atto ./cmd/atto    # ~/.local/bin/atto symlinks here
 go test ./...
 go vet ./...
-npm test                      # the three pi modules, 53 cases, no model involved
+npm test                      # the three pi modules, 57 cases, no model involved
 ```
 
 Benchmarks:

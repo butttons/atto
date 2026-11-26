@@ -79,6 +79,25 @@ export function describe(regions: Region[]): string {
     .join(", ");
 }
 
+// A refused edit is the model's next prompt, so it says what was seen, what was
+// not, and the one call that fixes it. It names that call in full: telling a
+// model to "read the range you are changing" left it to guess the numbers, and
+// this refusal is the second most common one in real sessions, every instance
+// followed by a blind re-read.
+export function refusal(
+  path: string,
+  rev: string,
+  v: { reason: "rev" | "region"; start: number; end: number; regions: Region[] },
+): string {
+  const head = `atto_edit: ${path}: nothing was written.`;
+  if (v.reason === "rev") {
+    return `${head} rev ${rev} was not issued for this file in this session, or your last edit replaced it. Read the range with atto_read, or locate the text with atto_find, then retry with the rev it returns.`;
+  }
+  const where = v.end < v.start ? `the insertion before line ${v.start}` : `lines ${v.start}..${v.end}`;
+  const call = `atto_read {path: ${JSON.stringify(path)}, from: ${v.start}, to: ${Math.max(v.start, v.end)}}`;
+  return `${head} ${where} had not been shown to you; this session showed ${describe(v.regions)}. Run ${call}, then retry with the rev it returns.`;
+}
+
 /**
  * parseShown reads the window a `read` actually printed: an explicit range, or
  * the first N lines when the output was truncated at the read cap.
@@ -86,6 +105,10 @@ export function describe(regions: Region[]): string {
 export function parseShown(stdout: string, requested?: { from?: number; to?: number }): Region[] {
   const truncated = /^truncated (\d+)\/(\d+)$/m.exec(stdout);
   if (truncated) return [{ from: 1, to: Number(truncated[1]) }];
+  // The printed window wins over the request: a read past EOF is clamped, and
+  // granting the unclamped request would authorize lines that were never shown.
+  const shown = /^showing (\d+)\.\.(\d+)$/m.exec(stdout);
+  if (shown) return [{ from: Number(shown[1]), to: Number(shown[2]) }];
   const lines = /^lines (\d+)$/m.exec(stdout);
   const total = lines ? Number(lines[1]) : 0;
   if (requested && requested.from !== undefined) {

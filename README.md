@@ -142,7 +142,7 @@ Nothing is created until a command needs it.
 ```sh
 go build -o atto ./cmd/atto
 go test ./... && go vet ./...
-npm test                  # the three pi modules, 53 cases, no model involved (node 22+)
+npm test                  # the three pi modules, 57 cases, no model involved (node 22+)
 ```
 
 ```sh

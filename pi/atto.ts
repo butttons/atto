@@ -29,7 +29,7 @@ import { Type } from "@earendil-works/pi-ai";
 import { withFileMutationQueue, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { isShellEdit } from "./guard.ts";
 import { runAtto } from "./proc.ts";
-import { check, describe, parseMatches, parseShown, parseSpans, wholeFile, type Grant } from "./windows.ts";
+import { check, parseMatches, parseShown, parseSpans, refusal, wholeFile, type Grant } from "./windows.ts";
 
 type Change = { start: number; end: number; text: string };
 
@@ -133,22 +133,6 @@ function parseNewRev(stdout: string): string | undefined {
 function parseRev(stdout: string): string | undefined {
   const m = stdout.match(/^rev\s+(\S+)/m);
   return m ? m[1] : undefined;
-}
-
-// A refused edit is the model's next prompt, so it says what was seen, what was
-// not, and the one call that fixes it.
-function refusal(
-  path: string,
-  rev: string,
-  v: { reason: "rev" | "region"; start: number; end: number; regions: { from: number; to: number }[] },
-): string {
-  const head = `atto_edit: ${path}: nothing was written.`;
-  const fix = "Read the range you are changing with atto_read, or locate the text with atto_find, then retry with the rev it returns.";
-  if (v.reason === "rev") {
-    return `${head} rev ${rev} was not issued for this file in this session, or your last edit replaced it. ${fix}`;
-  }
-  const where = v.end < v.start ? `the insertion before line ${v.start}` : `lines ${v.start}..${v.end}`;
-  return `${head} ${where} had not been shown to you; this session showed ${describe(v.regions)}. ${fix}`;
 }
 
 // The regexes live in guard.ts so they can be unit-tested without a model.
