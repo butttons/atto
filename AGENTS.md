@@ -12,6 +12,7 @@ are in `README.md`; the format is in `CONTRACT.md`.
 | `pi/atto.ts` | the pi extension: gates the model onto atto |
 | `pi/guard.ts` | the shell guard, a pure predicate |
 | `pi/windows.ts` | what a rev authorizes: the lines a tool actually showed |
+| `pi/proc.ts` | runs the binary; where a dead child's EPIPE used to kill pi |
 | `CONTRACT.md` | the five invariants, plan grammar, guarantees, benchmarks |
 | `bench/` | harnesses: `bench.py` quick, `tools_bench.py` real CLIs, `ab.py` the model A/B |
 | `.agents/skills/atto/` | the skill a model loads before editing a file |
@@ -39,7 +40,7 @@ pi: `edit` works, nothing is guarded, and no atto tool can run.
 go build -o atto ./cmd/atto    # ~/.local/bin/atto symlinks here
 go test ./...
 go vet ./...
-npm test                      # both pi guards, 49 cases, no model involved
+npm test                      # the three pi modules, 53 cases, no model involved
 ```
 
 Benchmarks:

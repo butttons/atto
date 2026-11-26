@@ -12,7 +12,8 @@
   "scripts": {
     "test": "node --experimental-strip-types --test pi/*.test.ts",
     "test:guard": "node --experimental-strip-types --test pi/guard.test.ts",
-    "test:windows": "node --experimental-strip-types --test pi/windows.test.ts"
+    "test:windows": "node --experimental-strip-types --test pi/windows.test.ts",
+    "test:proc": "node --experimental-strip-types --test pi/proc.test.ts"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",

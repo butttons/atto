@@ -22,16 +22,14 @@
  *   ATTO_ALLOW_SHELL_EDITS=1    (do not use for normal agent work)
  */
 
-import { spawn } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { Type } from "@earendil-works/pi-ai";
 import { withFileMutationQueue, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { isShellEdit } from "./guard.ts";
+import { runAtto } from "./proc.ts";
 import { check, describe, parseMatches, parseShown, parseSpans, wholeFile, type Grant } from "./windows.ts";
-
-type AttoResult = { code: number; stdout: string; stderr: string };
 
 type Change = { start: number; end: number; text: string };
 
@@ -57,10 +55,6 @@ function grantWindow(key: string, rev: string, regions: { from: number; to: numb
   grants.set(key, { rev, regions });
 }
 
-function attoBin(): string {
-  return process.env.ATTO_BIN || "atto";
-}
-
 function stateFile(): string {
   return join(process.env.ATTO_HOME || join(homedir(), ".local", "state", "atto"), "pi.jsonl");
 }
@@ -72,30 +66,6 @@ function log(entry: Record<string, unknown>): void {
   } catch {
     // Metrics are best-effort; they must never block an edit.
   }
-}
-
-function runAtto(args: string[], cwd: string, input?: string): Promise<AttoResult> {
-  return new Promise((resolvePromise, reject) => {
-    const child = spawn(attoBin(), args, { cwd, env: process.env });
-    let stdout = "";
-    let stderr = "";
-    const timer = setTimeout(() => child.kill("SIGKILL"), 15_000);
-    child.stdout.on("data", (d) => (stdout += d.toString()));
-    child.stderr.on("data", (d) => (stderr += d.toString()));
-    child.on("error", (err) => {
-      clearTimeout(timer);
-      reject(
-        new Error(
-          `atto: ${err.message}. Set ATTO_BIN to the binary, or put it on PATH.`,
-        ),
-      );
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolvePromise({ code: code ?? 1, stdout, stderr });
-    });
-    child.stdin.end(input ?? "");
-  });
 }
 
 function bodyLines(text: string): string[] {
